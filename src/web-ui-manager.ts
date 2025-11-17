@@ -15,18 +15,15 @@ export class WebUIManager {
    * 启动 Web UI
    */
   async start(options: WebUIStartOptions): Promise<WebUIStartResult> {
-    // 如果已经启动，返回现有信息
+    // 如果已经启动，先停止现有服务器
     if (this.server && this.currentPort) {
-      return {
-        url: `http://localhost:${this.currentPort}`,
-        port: this.currentPort,
-        mode: 'existing',
-        autoOpened: false
-      };
+      await this.server.stop();
+      this.server = null;
+      this.currentPort = null;
     }
 
     // 查找可用端口
-    const port = await this.findAvailablePort(options.port || 3002);
+    const port = await this.findAvailablePort(options.port || 1107);
 
     // 启动 Web 服务器
     this.server = new WebUIServer(options.terminalManager);
@@ -72,7 +69,33 @@ export class WebUIManager {
    * 查找可用端口
    */
   private async findAvailablePort(startPort: number): Promise<number> {
-    for (let port = startPort; port < startPort + 100; port++) {
+    // 首先检查默认端口1107是否可用
+    const defaultPortAvailable = await this.isPortAvailable(startPort);
+    if (defaultPortAvailable) {
+      return startPort;
+    }
+    
+    // 如果1107端口被占用，强制结束占用该端口的进程
+    if (startPort === 1107) {
+      try {
+        await this.killPortProcess(startPort);
+        // 等待一段时间让进程完全结束
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        // 再次检查端口是否可用
+        const nowAvailable = await this.isPortAvailable(startPort);
+        if (nowAvailable) {
+          return startPort;
+        }
+      } catch (error) {
+        // 如果结束进程失败，记录错误但继续尝试其他端口
+        if (process.env.MCP_DEBUG === 'true') {
+          process.stderr.write(`[MCP-DEBUG] Failed to kill process on port ${startPort}: ${error}\n`);
+        }
+      }
+    }
+    
+    // 如果仍然无法使用1107端口，尝试其他端口
+    for (let port = startPort + 1; port < startPort + 100; port++) {
       const available = await this.isPortAvailable(port);
       if (available) {
         return port;
@@ -102,6 +125,28 @@ export class WebUIManager {
       });
 
       server.listen(port, '127.0.0.1');
+    });
+  }
+
+  /**
+   * 强制结束占用指定端口的进程
+   */
+  private async killPortProcess(port: number): Promise<void> {
+    return new Promise((resolve, reject) => {
+      let command: string;
+      
+      if (process.platform === 'win32') {
+        // Windows系统
+        command = `for /f "tokens=5" %a in ('netstat -aon ^| findstr :${port}') do taskkill /f /pid %a`;
+      } else {
+        // Linux/macOS系统
+        command = `lsof -ti:${port} | xargs kill -9`;
+      }
+
+      exec(command, (error) => {
+        // 即使命令执行失败（可能是因为没有进程占用该端口），也认为操作成功
+        resolve();
+      });
     });
   }
 

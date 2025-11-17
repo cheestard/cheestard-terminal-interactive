@@ -23,7 +23,6 @@ export class WebUIServer {
     this.terminalManager = terminalManager;
     this.app = express();
     this.setupMiddleware();
-    this.setupRoutes();
   }
 
   /**
@@ -34,12 +33,6 @@ export class WebUIServer {
     this.app.use(express.json());
     this.app.use(express.urlencoded({ extended: true }));
 
-    // 静态文件服务 (在开发环境中由 Vite 处理)
-    if (process.env.NODE_ENV === 'production') {
-      const publicPath = path.join(__dirname, '../../frontend/dist');
-      this.app.use(express.static(publicPath));
-    }
-
     // 请求日志
     this.app.use((req, res, next) => {
       if (process.env.MCP_DEBUG === 'true') {
@@ -47,28 +40,42 @@ export class WebUIServer {
       }
       next();
     });
+
+    // 静态文件服务 - 直接使用编译后的前端文件
+    // 使用硬编码的绝对路径确保正确找到前端文件
+    const frontendDistPath = 'D:/CodeRelated/cheestard-terminal-interactive/frontend/dist';
+    this.app.use(express.static(frontendDistPath));
+    console.log('使用编译后的前端文件，路径:', frontendDistPath);
+    console.log('当前工作目录:', process.cwd());
+    console.log('__dirname:', __dirname);
+    
+    // 同时提供public目录的静态文件
+    const publicPath = path.resolve(__dirname, '..', 'public');
+    this.app.use('/public', express.static(publicPath));
+    
+    // 后设置路由，确保静态文件服务优先
+    this.setupRoutes();
   }
 
   /**
    * 设置路由
    */
   private setupRoutes(): void {
-    // 主页 (在开发环境中由 Vite 处理)
-    if (process.env.NODE_ENV === 'production') {
-      this.app.get('/', (req: Request, res: Response) => {
-        res.sendFile(path.join(__dirname, '../../frontend/dist/index.html'));
-      });
-    }
-
-    // 终端详情页 (在开发环境中由 Vite 处理)
-    if (process.env.NODE_ENV === 'production') {
-      this.app.get('/terminal/:id', (req: Request, res: Response) => {
-        res.sendFile(path.join(__dirname, '../../frontend/dist/index.html'));
-      });
-    }
-
-    // REST API 端点
+    // REST API 端点 - 必须在通配符路由之前
     this.setupApiRoutes();
+
+    // 终端详情页 - 旧的HTML处理
+    this.app.get('/terminal/:id', (req: Request, res: Response) => {
+      const indexPath = 'D:/CodeRelated/cheestard-terminal-interactive/frontend/dist/index.html';
+      res.sendFile(indexPath);
+    });
+
+    // 其他路径 - 支持SPA和静态文件，但不包括API路径
+    this.app.get('*', (req: Request, res: Response) => {
+      // 所有非API路径都返回编译后的Vue应用
+      const indexPath = 'D:/CodeRelated/cheestard-terminal-interactive/frontend/dist/index.html';
+      res.sendFile(indexPath);
+    });
   }
 
   /**

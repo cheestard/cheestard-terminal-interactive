@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
+import TerminalDetailView from '../views/TerminalDetailView.vue'
 
 const routes = [
   {
@@ -7,7 +8,12 @@ const routes = [
     name: 'Home',
     component: HomeView
   },
-  // Other routes will be added here
+  {
+    path: '/terminal/:id',
+    name: 'TerminalDetail',
+    component: TerminalDetailView,
+    props: true
+  }
 ]
 
 const router = createRouter({

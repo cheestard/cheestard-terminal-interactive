@@ -1,9 +1,12 @@
 <script setup lang="ts">
-// App.vue - Main application component
+import LanguageSwitcher from './components/LanguageSwitcher.vue'
 </script>
 
 <template>
-  <div class="min-h-screen bg-base-200">
+  <div class="min-h-screen bg-white">
+    <div class="fixed top-4 right-4 z-50">
+      <LanguageSwitcher />
+    </div>
     <router-view />
   </div>
 </template>

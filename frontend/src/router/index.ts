@@ -1,24 +1,20 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
-import TerminalDetailView from '../views/TerminalDetailView.vue'
-
-const routes = [
-  {
-    path: '/',
-    name: 'Home',
-    component: HomeView
-  },
-  {
-    path: '/terminal/:id',
-    name: 'TerminalDetail',
-    component: TerminalDetailView,
-    props: true
-  }
-]
 
 const router = createRouter({
-  history: createWebHistory(),
-  routes
+  history: createWebHistory(import.meta.env.BASE_URL),
+  routes: [
+    {
+      path: '/',
+      name: 'home',
+      component: HomeView
+    },
+    {
+      path: '/terminal/:id',
+      name: 'terminal-detail',
+      component: () => import('../views/TerminalDetailView.vue')
+    }
+  ]
 })
 
 export default router

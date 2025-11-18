@@ -2,12 +2,12 @@
 
 [English README](README.en.md)
 
-##### This tool enables AI to control multiple terminals and interact through MCP (Model Context Protocol), solving the problem of AI programming tools getting stuck in terminals and not proceeding to the next step. It implements persistent terminal session management - even after the AI conversation is closed, terminal commands continue running. Recommended for Claude Code, Codex, Cursor, Cline, Roocode, Kilocode users, effectively reducing the probability of getting stuck and improving the success rate of automated task execution.
+#### This tool enables AI to control multiple terminals and interact through MCP (Model Context Protocol), solving the problem of AI programming tools getting stuck in terminals and not proceeding to the next step. It implements persistent terminal session management - even after the AI conversation is closed, terminal commands continue running. Recommended for Claude Code, Codex, Cursor, Cline, Roocode, Kilocode users, effectively reducing the probability of getting stuck and improving the success rate of automated task execution.
 
 
 As of 2025-11-03, comparison of terminal interaction features in mainstream AI programming tools (please correct me if there are errors 🥲):
 
-| Feature | Cheestard Terminal Interactive | Claude Code | Codex | Cursor | Cline | Roocode | Kilocode | Gemini CLI | Qwen Code | iFlow CLI | Open Code | windsurf | warp | Augment |
+| Feature | Cheestard Terminal Interactive | Claude Code | Codex | Cursor | Cline | Roocode | Kilocode | Gemini CLI | Qwen Code | iFlow CLI | Open Code | windsurf | Warp | Augment |
 |---------|-------------------------------|-------------|-------|--------|-------|---------|----------|-------------|-----------|-----------|-----------|----------|------|---------|
 | Input ctrl+c | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
 | Input enter | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
@@ -60,16 +60,27 @@ As of 2025-11-03, comparison of terminal interaction features in mainstream AI p
 - **Interactive application support**: Supports vim, npm create and other interactive programs
 - **ANSI escape sequences**: Correctly handles terminal control characters
 
-## ⚙️ MCP Client Configuration
+## Usage
 
-> ⚠️ Due to `node-pty`, Windows users currently need to use Node.js version 20 or lower. Recommended to use `fnm use 20` https://github.com/Schniz/fnm
+### Run Backend Server
+⚠️ Due to `node-pty`, Windows users currently need to use Node.js version 20 or lower to work properly. For convenience, I have set all installation, compilation, and running scripts to use 20.19.5. Please make sure to install fnm: https://github.com/Schniz/fnm, otherwise it cannot be used, unless you use the same Node.js for every project, which is unlikely.
+```bash
+# Install dependencies
+node start_install.mjs
+```
+```bash
+# Run backend
+node start_be_cheestard-terminal-interactive.mjs
+```
 
-> Before configuring MCP clients, it's best to add a rule to your AI programming tool
+### ⚙️ MCP Client Configuration
+
+#### Before configuring MCP clients, it's best to add a rule to your AI programming tool
 ```plaintext
 Always use cheestard-terminal-interactive MCP terminal, prohibit using system prompt's built-in tool functions to execute commands.
 ```
 
-**All MCP clients that support Streamable HTTP can be used, different MCP clients will have slightly different configurations, please check the official documentation, here are simple examples**
+#### All MCP clients that support Streamable HTTP can be used, different MCP clients will have slightly different configurations, please check the corresponding client's official documentation, here are simple examples
 
 - **Cline / Roocode / Kilocode**:
 ```json
@@ -94,6 +105,30 @@ Always use cheestard-terminal-interactive MCP terminal, prohibit using system pr
       "url": "http://localhost:1106/mcp"
     }
 ```
+
+**Command Line Addition Method:**
+In addition to the configuration file method, Claude Code also supports quickly adding MCP servers using the command line:
+
+```bash
+# Add cheestard-terminal-interactive server
+claude mcp add cheestard-terminal-interactive --scope user --type streamable-http --url http://localhost:1106/mcp
+
+# List configured MCP servers
+claude mcp list
+
+# Remove MCP server
+claude mcp remove cheestard-terminal-interactive
+```
+
+**Command Line Parameter Description:**
+- `--scope user`: Set configuration scope to user level
+- `--type streamable-http`: Specify transport type as streamable-http
+- `--url http://localhost:1106/mcp`: Specify server address
+
+For complex configurations, it's recommended to directly edit the configuration file:
+- macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- Windows: `%APPDATA%\Claude\claude_desktop_config.json`
+- Linux: `~/.config/Claude/claude_desktop_config.json`
 
 - **Gemini CLI**:
 ```json
@@ -135,7 +170,7 @@ Always use cheestard-terminal-interactive MCP terminal, prohibit using system pr
     }
 ```
 
-- **warp**:
+- **Warp**:
 ```json
     "cheestard-terminal-interactive": {
       "type": "streamable-http",
@@ -151,13 +186,7 @@ Always use cheestard-terminal-interactive MCP terminal, prohibit using system pr
     }
 ```
 
-## 🌐 Web Management Interface
-
-### Usage
-```bash
-# Install dependencies
-node start_install.mjs
-```
+### 🌐 Web Management Interface Usage
 ```bash
 node start_fe_cheestard-terminal-interactive.mjs
 ```

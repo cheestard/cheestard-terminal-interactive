@@ -16,10 +16,17 @@
 
  =====================================================================================
  */
-import { createRequire } from 'module';
 import { execSync } from 'child_process';
 import { join } from 'path';
 import { existsSync, mkdirSync, readFileSync, writeFileSync, statSync, unlinkSync } from 'fs';
+import { createRequire } from 'module';
+// Set Node.js version to 20.19.5
+try {
+    execSync('fnm use 20.19.5', { stdio: 'inherit' });
+} catch (error) {
+    console.error('Failed to set Node.js version using fnm:', error.message);
+    process.exit(1);
+}
 
 /**
  * Get cross-platform temporary directory path

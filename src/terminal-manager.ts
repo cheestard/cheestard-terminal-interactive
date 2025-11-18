@@ -469,7 +469,16 @@ export class TerminalManager extends EventEmitter {
     }
 
     try {
-      ptyProcess.kill(signal);
+      // Windows平台特殊处理
+      if (process.platform === 'win32') {
+        // 在Windows上，使用kill()而不传递信号参数
+        // 这会强制终止进程
+        ptyProcess.kill();
+      } else {
+        // Unix/Linux系统使用信号
+        ptyProcess.kill(signal);
+      }
+      
       session.status = 'terminated';
       session.lastActivity = new Date();
       this.emit('terminalKilled', terminalId, signal);

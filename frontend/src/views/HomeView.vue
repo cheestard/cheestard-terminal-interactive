@@ -35,7 +35,7 @@ const fetchTerminals = async () => {
       throw new Error('Failed to fetch terminals')
     }
     const data = await response.json()
-    terminals.value = Array.isArray(data) ? data : []
+    terminals.value = data.terminals || []
   } catch (error) {
     console.error('Error fetching terminals:', error)
     terminals.value = []
@@ -382,18 +382,19 @@ onMounted(() => {
     </section>
 
     <!-- 创建终端模态框 -->
-    <Dialog 
-      v-model:visible="showCreateModal" 
-      :header="t('home.createNewTerminal')" 
+    <Dialog
+      v-model:visible="showCreateModal"
+      :header="t('home.createNewTerminal')"
       :style="{ width: '500px' }"
       :modal="true"
+      :closeButtonProps="{ 'aria-label': t('common.close') }"
       class="create-modal"
     >
       <div class="modal-content">
         <div class="form-group">
           <label for="shell" class="form-label">
             <i class="pi pi-terminal"></i>
-            {{ t('home.shell') }} ({{ t('home.optional') }})
+            {{ t('home.shellType') }}
           </label>
           <InputText 
             id="shell"
@@ -405,7 +406,7 @@ onMounted(() => {
         <div class="form-group">
           <label for="cwd" class="form-label">
             <i class="pi pi-folder"></i>
-            {{ t('home.workingDirectory') }} ({{ t('home.optional') }})
+            {{ t('home.workingDirectory') }}
           </label>
           <InputText 
             id="cwd"

@@ -54,7 +54,15 @@
     "directoryPlaceholder": "例如: /home/user 或 C:\\Users",
     "directoryHint": "留空将使用当前工作目录",
     "createTerminalBtn": "创建终端",
-    "create": "创建"
+    "create": "创建",
+    "open": "打开",
+    "optional": "可选",
+    "terminalList": "终端列表",
+    "terminals": "终端",
+    "daysAgo": "{count}天前",
+    "minutesAgo": "分钟前",
+    "hoursAgo": "小时前",
+    "justNow": "刚刚"
   },
   "terminal": {
     "backToList": "返回终端列表",
@@ -85,7 +93,8 @@
   "time": {
     "justNow": "刚刚",
     "minutesAgo": "{count}分钟前",
-    "hoursAgo": "{count}小时前"
+    "hoursAgo": "{count}小时前",
+    "daysAgo": "{count}天前"
   },
   "messages": {
     "terminalCreated": "终端 {id} 已创建。",

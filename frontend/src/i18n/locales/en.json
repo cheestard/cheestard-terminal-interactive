@@ -54,7 +54,15 @@
     "directoryPlaceholder": "e.g: /home/user or C:\\Users",
     "directoryHint": "Leave empty to use current working directory",
     "createTerminalBtn": "Create Terminal",
-    "create": "Create"
+    "create": "Create",
+    "open": "Open",
+    "optional": "Optional",
+    "terminalList": "Terminal List",
+    "terminals": "Terminals",
+    "daysAgo": "{count} days ago",
+    "minutesAgo": "minutes ago",
+    "hoursAgo": "hours ago",
+    "justNow": "just now"
   },
   "terminal": {
     "backToList": "Back to Terminal List",
@@ -85,7 +93,8 @@
   "time": {
     "justNow": "Just now",
     "minutesAgo": "{count} minutes ago",
-    "hoursAgo": "{count} hours ago"
+    "hoursAgo": "{count} hours ago",
+    "daysAgo": "{count} days ago"
   },
   "messages": {
     "terminalCreated": "Terminal {id} created.",

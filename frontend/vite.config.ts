@@ -23,7 +23,9 @@ export default defineConfig({
     },
     // 禁用LightningCSS，使用默认的CSS处理器
     minify: 'esbuild',
-    cssMinify: false // 完全禁用CSS压缩以避免LightningCSS警告
+    cssMinify: false, // 完全禁用CSS压缩以避免LightningCSS警告
+    // 生成source map，在生产环境中也能看到源码错误位置
+    sourcemap: true
   },
   css: {
     // 禁用LightningCSS转换器

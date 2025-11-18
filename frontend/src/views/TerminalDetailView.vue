@@ -5,39 +5,28 @@ import { useI18n } from 'vue-i18n'
 import Button from 'primevue/button'
 import Card from 'primevue/card'
 import Badge from 'primevue/badge'
-import Toast from 'primevue/toast'
-import { useToast } from 'primevue/usetoast'
+import { Terminal } from 'xterm'
+import { FitAddon } from 'xterm-addon-fit'
 
 const route = useRoute()
 const router = useRouter()
 const { t } = useI18n()
-const toast = useToast()
 
 const terminalId = route.params.id as string
 const terminal = ref<any>(null)
-const commandInput = ref('')
-const terminalOutput = ref<string[]>([])
 const isLoading = ref(true)
 const isConnected = ref(false)
 const isFullscreen = ref(false)
-const showCommandHistory = ref(false)
-const commandHistory = ref<string[]>([])
-const historyIndex = ref(-1)
 
 let ws: WebSocket | null = null
-let autoScrollTimer: number | null = null
+let term: Terminal | null = null
+let fitAddon: FitAddon | null = null
 
 // 计算属性
 const connectionStatus = computed(() => ({
   text: isConnected.value ? t('terminal.connected') : t('terminal.disconnected'),
   severity: isConnected.value ? 'success' : 'danger',
   icon: isConnected.value ? 'pi-check-circle' : 'pi-times-circle'
-}))
-
-const terminalStats = computed(() => ({
-  outputLines: terminalOutput.value.length,
-  uptime: terminal.value ? calculateUptime(terminal.value.created) : '0m',
-  lastActivity: terminalOutput.value.length > 0 ? '刚刚' : '无活动'
 }))
 
 const calculateUptime = (created: string) => {
@@ -48,110 +37,200 @@ const calculateUptime = (created: string) => {
   
   if (diffMins < 60) return `${diffMins}m`
   const diffHours = Math.floor(diffMins / 60)
-  if (diffHours < 24) return `${diffHours}h ${diffMins % 60}m`
+  if (diffHours < 24) return `${diffHours}h`
   const diffDays = Math.floor(diffHours / 24)
-  return `${diffDays}d ${diffHours % 24}h`
+  return `${diffDays}d`
 }
 
+const terminalStats = computed(() => ({
+  uptime: terminal.value ? calculateUptime(terminal.value.created) : '0m'
+}))
+
+// 初始化终端
+const setupTerminal = () => {
+  try {
+    term = new Terminal({
+      cursorBlink: true,
+      fontSize: 14,
+      fontFamily: 'Menlo, Monaco, "Courier New", monospace',
+      theme: {
+        background: '#000000',
+        foreground: '#ffffff',
+        cursor: '#ffffff',
+        selection: '#ffffff40'
+      },
+      convertEol: true,
+      rows: 24,
+      cols: 80
+    })
+
+    // 添加FitAddon
+    fitAddon = new FitAddon()
+    term.loadAddon(fitAddon)
+
+    // 获取容器并打开终端
+    nextTick(() => {
+      const container = document.getElementById('terminal-container')
+      if (container && term) {
+        term.open(container)
+        fitAddon?.fit()
+
+        // 监听窗口大小变化
+        window.addEventListener('resize', () => {
+          fitAddon?.fit()
+        })
+      }
+    })
+
+    console.log('Terminal initialized successfully')
+  } catch (error) {
+    console.error('Failed to setup terminal:', error)
+  }
+}
+
+// WebSocket连接
+const connectWebSocket = () => {
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+  const wsUrl = `${protocol}//${window.location.host}`
+
+  ws = new WebSocket(wsUrl)
+
+  ws.onopen = () => {
+    console.log('WebSocket connected')
+    isConnected.value = true
+  }
+
+  ws.onmessage = (event) => {
+    const message = JSON.parse(event.data)
+    handleWebSocketMessage(message)
+  }
+
+  ws.onerror = (error) => {
+    console.error('WebSocket error:', error)
+    isConnected.value = false
+  }
+
+  ws.onclose = () => {
+    console.log('WebSocket disconnected')
+    isConnected.value = false
+  }
+}
+
+// 处理WebSocket消息
+const handleWebSocketMessage = (message: any) => {
+  if (message.terminalId !== terminalId) return
+  
+  switch (message.type) {
+    case 'output':
+      if (term) {
+        term.write(message.data)
+      }
+      break
+    case 'exit':
+      if (term) {
+        term.write('\r\n\x1b[31m[Terminal Exited]\x1b[0m\r\n')
+      }
+      break
+  }
+}
+
+// 获取终端信息
 const fetchTerminalDetails = async () => {
   try {
     const response = await fetch(`/api/terminals/${terminalId}`)
     if (!response.ok) {
-      throw new Error('Failed to fetch terminal details')
+      throw new Error(`Terminal not found (${response.status})`)
     }
     const data = await response.json()
     terminal.value = data
   } catch (error) {
-    console.error('Error fetching terminal details:', error)
-    toast.add({
-      severity: 'error',
-      summary: t('common.error'),
-      detail: t('messages.fetchTerminalDetailsError'),
-      life: 3000
-    })
-    router.push('/')
+    console.error('Failed to fetch terminal details:', error)
   } finally {
     isLoading.value = false
   }
 }
 
-const connectWebSocket = () => {
-  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-  const wsUrl = `${protocol}//${window.location.host}/ws/terminal/${terminalId}`
+// 加载终端历史输出
+let currentCursor = 0
+const loadTerminalOutput = async () => {
+  try {
+    console.log('Loading terminal output for:', terminalId)
+    const response = await fetch(`/api/terminals/${terminalId}/output?since=${currentCursor}`)
 
-  ws = new WebSocket(wsUrl)
-
-  ws.onopen = () => {
-    console.log('Terminal WebSocket connected')
-    isConnected.value = true
-    toast.add({
-      severity: 'success',
-      summary: t('terminal.connected'),
-      detail: t('terminal.connectedTo', { id: terminalId.substring(0, 8) }),
-      life: 3000
-    })
-  }
-
-  ws.onmessage = (event) => {
-    const message = JSON.parse(event.data)
-    if (message.type === 'output') {
-      terminalOutput.value.push(message.data)
-      // 智能滚动
-      autoScrollToBottom()
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('Failed to load output:', errorText)
+      throw new Error('Failed to load output')
     }
-  }
 
-  ws.onerror = (error) => {
-    console.error('Terminal WebSocket error:', error)
-    isConnected.value = false
-    toast.add({
-      severity: 'error',
-      summary: t('terminal.connectionError'),
-      detail: t('terminal.terminalConnectionError'),
-      life: 3000
+    const data = await response.json()
+    console.log('Output data:', data)
+
+    if (data.output && term) {
+      term.write(data.output)
+      console.log('Wrote output to terminal')
+    } else {
+      console.log('No output to display')
+    }
+
+    currentCursor = data.cursor || data.since || 0
+    console.log('Current cursor:', currentCursor)
+  } catch (error) {
+    console.error('Failed to load terminal output:', error)
+  }
+}
+
+// 发送命令
+const sendCommand = async (command: string) => {
+  if (!command.trim() || !ws || ws.readyState !== WebSocket.OPEN) return
+
+  try {
+    const response = await fetch(`/api/terminals/${terminalId}/input`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ input: command })
     })
-  }
 
-  ws.onclose = () => {
-    console.log('Terminal WebSocket disconnected')
-    isConnected.value = false
-    toast.add({
-      severity: 'warn',
-      summary: t('terminal.connectionLost'),
-      detail: t('terminal.terminalConnectionLost'),
-      life: 3000
+    if (!response.ok) {
+      throw new Error(`Failed to send command (${response.status})`)
+    }
+  } catch (error) {
+    console.error('Failed to send command:', error)
+  }
+}
+
+// 终端输入处理
+const handleTerminalData = (data: string) => {
+  sendCommand(data)
+}
+
+// 清空终端
+const clearTerminal = () => {
+  if (term) {
+    term.clear()
+  }
+}
+
+// 终止终端
+const killTerminal = async () => {
+  try {
+    const response = await fetch(`/api/terminals/${terminalId}`, {
+      method: 'DELETE'
     })
+    
+    if (response.ok) {
+      router.push('/')
+    } else {
+      throw new Error('Failed to kill terminal')
+    }
+  } catch (error) {
+    console.error('Failed to kill terminal:', error)
   }
 }
 
-const sendCommand = () => {
-  if (!commandInput.value.trim() || !isConnected.value || !ws) return
-
-  const command = commandInput.value
-  commandInput.value = ''
-  
-  // 添加到历史记录
-  commandHistory.value.push(command)
-  historyIndex.value = -1
-  
-  // 添加命令到输出以获得更好的用户体验
-  terminalOutput.value.push(`$ ${command}`)
-  
-  ws.send(JSON.stringify({
-    type: 'command',
-    data: command
-  }))
-}
-
-const clearOutput = () => {
-  terminalOutput.value = []
-  toast.add({
-    severity: 'info',
-    summary: '终端已清空',
-    life: 2000
-  })
-}
-
+// 重新连接
 const reconnect = () => {
   if (ws) {
     ws.close()
@@ -159,98 +238,132 @@ const reconnect = () => {
   connectWebSocket()
 }
 
+// 切换全屏
 const toggleFullscreen = () => {
   isFullscreen.value = !isFullscreen.value
   nextTick(() => {
-    autoScrollToBottom()
+    fitAddon?.fit()
   })
 }
 
-const copyOutput = async () => {
-  const outputText = terminalOutput.value.join('\n')
-  try {
-    await navigator.clipboard.writeText(outputText)
-    toast.add({
-      severity: 'success',
-      summary: '已复制到剪贴板',
-      life: 2000
-    })
-  } catch (error) {
-    console.error('Failed to copy:', error)
-    toast.add({
-      severity: 'error',
-      summary: '复制失败',
-      life: 2000
-    })
-  }
-}
-
-const handleKeyNavigation = (event: KeyboardEvent) => {
-  if (event.key === 'ArrowUp') {
-    event.preventDefault()
-    if (historyIndex.value < commandHistory.value.length - 1) {
-      historyIndex.value++
-      commandInput.value = commandHistory.value[commandHistory.value.length - 1 - historyIndex.value]
-    }
-  } else if (event.key === 'ArrowDown') {
-    event.preventDefault()
-    if (historyIndex.value > 0) {
-      historyIndex.value--
-      commandInput.value = commandHistory.value[commandHistory.value.length - 1 - historyIndex.value]
-    } else if (historyIndex.value === 0) {
-      historyIndex.value = -1
-      commandInput.value = ''
-    }
-  }
-}
-
-const autoScrollToBottom = () => {
-  if (autoScrollTimer) {
-    clearTimeout(autoScrollTimer)
-  }
-  autoScrollTimer = setTimeout(() => {
-    const outputElement = document.getElementById('terminal-output')
-    if (outputElement) {
-      outputElement.scrollTop = outputElement.scrollHeight
-    }
-  }, 50)
-}
-
-onMounted(() => {
-  fetchTerminalDetails()
+onMounted(async () => {
+  await fetchTerminalDetails()
+  setupTerminal()
   connectWebSocket()
-  // 添加键盘事件监听
-  document.addEventListener('keydown', handleKeyNavigation)
+  await loadTerminalOutput() // 加载历史输出
+
+  // 设置终端数据处理器
+  if (term) {
+    term.onData(handleTerminalData)
+  }
+
+  // 强制隐藏xterm.js的辅助元素和页面底部的多余字符
+  nextTick(() => {
+    // 隐藏xterm-char-measure-element
+    const charMeasureElements = document.querySelectorAll('.xterm-char-measure-element')
+    charMeasureElements.forEach(el => {
+      (el as HTMLElement).style.display = 'none'
+      ;(el as HTMLElement).style.visibility = 'hidden'
+      ;(el as HTMLElement).style.opacity = '0'
+      ;(el as HTMLElement).style.position = 'absolute'
+      ;(el as HTMLElement).style.left = '-99999px'
+      ;(el as HTMLElement).style.top = '-99999px'
+      ;(el as HTMLElement).style.width = '0'
+      ;(el as HTMLElement).style.height = '0'
+      ;(el as HTMLElement).style.fontSize = '0'
+      ;(el as HTMLElement).style.lineHeight = '0'
+      ;(el as HTMLElement).style.overflow = 'hidden'
+      ;(el as HTMLElement).style.clip = 'rect(0, 0, 0, 0)'
+      ;(el as HTMLElement).style.clipPath = 'inset(50%)'
+    })
+
+    // 隐藏页面底部的多余字符
+    const removeExtraChars = () => {
+      // 查找包含多余字符的元素
+      const allElements = document.querySelectorAll('*')
+      allElements.forEach(el => {
+        const element = el as HTMLElement
+        if (element.textContent && element.textContent.includes('}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}')) {
+          element.remove()
+        }
+      })
+      
+      // 查找body下的直接子元素（除了#app）
+      const bodyDivs = document.querySelectorAll('body > div:not(#app)')
+      bodyDivs.forEach(el => {
+        (el as HTMLElement).style.display = 'none'
+        ;(el as HTMLElement).style.visibility = 'hidden'
+        ;(el as HTMLElement).style.opacity = '0'
+        ;(el as HTMLElement).style.position = 'absolute'
+        ;(el as HTMLElement).style.left = '-99999px'
+        ;(el as HTMLElement).style.top = '-99999px'
+        ;(el as HTMLElement).style.width = '0'
+        ;(el as HTMLElement).style.height = '0'
+        ;(el as HTMLElement).style.overflow = 'hidden'
+      })
+    }
+
+    // 使用MutationObserver监控DOM变化
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.type === 'childList') {
+          mutation.addedNodes.forEach((node) => {
+            if (node.nodeType === Node.ELEMENT_NODE) {
+              const element = node as Element
+              // 检查新添加的元素是否包含多余字符
+              if (element.textContent && element.textContent.includes('}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}')) {
+                element.remove()
+              }
+            }
+          })
+        }
+      })
+    })
+
+    // 监控body的变化
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true
+    })
+
+    // 定期检查并隐藏这些元素（防止xterm.js重新创建）
+    const hideElements = () => {
+      const charElements = document.querySelectorAll('.xterm-char-measure-element')
+      charElements.forEach(el => {
+        (el as HTMLElement).style.display = 'none'
+        ;(el as HTMLElement).style.visibility = 'hidden'
+        ;(el as HTMLElement).textContent = ''
+      })
+
+      removeExtraChars()
+    }
+
+    // 立即执行一次
+    hideElements()
+    
+    // 每100ms检查一次
+    const intervalId = setInterval(hideElements, 100)
+    
+    // 在组件卸载时清理定时器和观察器
+    onUnmounted(() => {
+      clearInterval(intervalId)
+      observer.disconnect()
+    })
+  })
 })
 
 onUnmounted(() => {
   if (ws) {
     ws.close()
   }
-  if (autoScrollTimer) {
-    clearTimeout(autoScrollTimer)
+  if (term) {
+    term.dispose()
   }
-  // 移除键盘事件监听
-  document.removeEventListener('keydown', handleKeyNavigation)
 })
-
-// 格式化输出行
-const formatOutputLine = (line: string) => {
-  if (line.startsWith('$')) {
-    return `<span class="command-text">${line}</span>`
-  }
-  // 简单的语法高亮
-  return line
-    .replace(/\b(error|Error|ERROR)\b/g, '<span class="error-text">$1</span>')
-    .replace(/\b(warning|Warning|WARNING)\b/g, '<span class="warning-text">$1</span>')
-    .replace(/\b(success|Success|SUCCESS)\b/g, '<span class="success-text">$1</span>')
-}
 </script>
 
 <template>
   <div class="terminal-container" :class="{ 'fullscreen': isFullscreen }">
-    <Toast />
-    
     <!-- 顶部控制栏 -->
     <header class="terminal-header">
       <div class="header-left">
@@ -276,10 +389,6 @@ const formatOutputLine = (line: string) => {
       <div class="header-right">
         <div class="terminal-stats">
           <span class="stat-item">
-            <i class="pi pi-list"></i>
-            {{ terminalStats.outputLines }} 行
-          </span>
-          <span class="stat-item">
             <i class="pi pi-clock"></i>
             {{ terminalStats.uptime }}
           </span>
@@ -287,20 +396,12 @@ const formatOutputLine = (line: string) => {
         
         <div class="control-buttons">
           <Button 
-            icon="pi pi-copy" 
-            v-tooltip="'复制输出'"
-            severity="secondary" 
-            size="small"
-            class="control-btn"
-            @click="copyOutput"
-          />
-          <Button 
             icon="pi pi-trash" 
-            v-tooltip="'清空输出'"
+            v-tooltip="'清空终端'"
             severity="secondary" 
             size="small"
             class="control-btn"
-            @click="clearOutput"
+            @click="clearTerminal"
           />
           <Button 
             icon="pi pi-refresh" 
@@ -310,6 +411,14 @@ const formatOutputLine = (line: string) => {
             class="control-btn"
             @click="reconnect" 
             :disabled="isConnected"
+          />
+          <Button 
+            icon="pi pi-times" 
+            v-tooltip="'终止终端'"
+            severity="danger" 
+            size="small"
+            class="control-btn"
+            @click="killTerminal"
           />
           <Button 
             :icon="isFullscreen ? 'pi pi-window-minimize' : 'pi pi-window-maximize'" 
@@ -351,32 +460,23 @@ const formatOutputLine = (line: string) => {
                 <div class="info-item">
                   <span class="info-label">
                     <i class="pi pi-hashtag"></i>
-                    ID
-                  </span>
-                  <span class="info-value">{{ terminal?.id?.substring(0, 8) }}</span>
-                </div>
-                <div class="info-item">
-                  <span class="info-label">
-                    <i class="pi pi-cog"></i>
                     {{ t('home.pid') }}
                   </span>
-                  <span class="info-value">{{ terminal?.pid }}</span>
+                  <span class="info-value">{{ terminal?.pid || '-' }}</span>
                 </div>
                 <div class="info-item">
                   <span class="info-label">
-                    <i class="pi pi-terminal"></i>
+                    <i class="pi pi-desktop"></i>
                     {{ t('home.shell') }}
                   </span>
-                  <span class="info-value">{{ terminal?.shell || t('home.default') }}</span>
+                  <span class="info-value">{{ terminal?.shell || '-' }}</span>
                 </div>
                 <div class="info-item">
                   <span class="info-label">
                     <i class="pi pi-folder"></i>
                     {{ t('home.directory') }}
                   </span>
-                  <span class="info-value truncate" :title="terminal?.cwd">
-                    {{ terminal?.cwd || t('home.defaultDirectory') }}
-                  </span>
+                  <span class="info-value">{{ terminal?.cwd || '-' }}</span>
                 </div>
                 <div class="info-item">
                   <span class="info-label">
@@ -415,58 +515,15 @@ const formatOutputLine = (line: string) => {
                 {{ connectionStatus.text }} - {{ terminalId.substring(0, 8) }}
               </div>
               <div class="window-actions">
-                <span class="action-item">{{ terminalStats.outputLines }} 行</span>
+                <span class="action-item">{{ terminalStats.uptime }}</span>
               </div>
             </div>
 
-            <!-- 终端输出 -->
+            <!-- 终端容器 -->
             <div 
-              id="terminal-output"
-              class="terminal-output"
-              :class="{ 'empty': terminalOutput.length === 0 }"
-            >
-              <div v-if="terminalOutput.length === 0" class="empty-output">
-                <i class="pi pi-inbox"></i>
-                <p>{{ t('terminal.noOutput') }}</p>
-                <small>输入命令开始与终端交互</small>
-              </div>
-              <div v-else class="output-content">
-                <div 
-                  v-for="(line, index) in terminalOutput" 
-                  :key="index" 
-                  class="output-line"
-                  :class="{ 'command-line': line.startsWith('$') }"
-                >
-                  <span v-html="formatOutputLine(line)"></span>
-                </div>
-              </div>
-            </div>
-
-            <!-- 命令输入区域 -->
-            <div class="terminal-input">
-              <div class="input-prompt">
-                <span class="prompt-symbol">$</span>
-                <input
-                  v-model="commandInput"
-                  @keyup.enter="sendCommand"
-                  :disabled="!isConnected"
-                  :placeholder="isConnected ? t('terminal.commandPlaceholder') : t('terminal.disconnected')"
-                  class="command-input"
-                  autocomplete="off"
-                  spellcheck="false"
-                />
-              </div>
-              <div class="input-actions">
-                <Button 
-                  icon="pi pi-send" 
-                  severity="primary" 
-                  size="small"
-                  class="send-btn"
-                  @click="sendCommand"
-                  :disabled="!isConnected || !commandInput.trim()"
-                />
-              </div>
-            </div>
+              id="terminal-container"
+              class="terminal-container-wrapper"
+            ></div>
           </div>
         </section>
       </div>
@@ -474,15 +531,13 @@ const formatOutputLine = (line: string) => {
   </div>
 </template>
 
-
 <style scoped>
-/* 终端容器 */
 .terminal-container {
-  min-height: 100vh;
-  background: var(--bg-secondary);
+  height: 100vh;
   display: flex;
   flex-direction: column;
-  animation: fadeIn var(--transition-normal) ease-out;
+  background: #1a1a1a;
+  color: #ffffff;
 }
 
 .terminal-container.fullscreen {
@@ -491,111 +546,101 @@ const formatOutputLine = (line: string) => {
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 1000;
-  background: var(--bg-primary);
+  z-index: 9999;
 }
 
-/* 顶部控制栏 */
 .terminal-header {
-  background: var(--bg-primary);
-  border-bottom: 1px solid var(--border-light);
-  padding: var(--spacing) var(--spacing-lg);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  box-shadow: var(--shadow-sm);
-  position: sticky;
-  top: 0;
-  z-index: 100;
+  padding: 1rem 1.5rem;
+  background: #2d2d2d;
+  border-bottom: 1px solid #404040;
+  min-height: 60px;
 }
 
 .header-left {
   display: flex;
   align-items: center;
-  gap: var(--spacing-lg);
+  gap: 1rem;
 }
 
 .back-btn {
-  transition: all var(--transition-fast);
+  background: #404040 !important;
+  border: 1px solid #555 !important;
+  color: #fff !important;
 }
 
 .back-btn:hover {
-  transform: translateX(-2px);
+  background: #555 !important;
 }
 
 .terminal-title {
   display: flex;
   align-items: center;
-  gap: var(--spacing);
+  gap: 0.5rem;
 }
 
 .terminal-icon {
-  font-size: var(--text-xl);
-  animation: pulse 2s ease-in-out infinite;
+  font-size: 1.2rem;
 }
 
 .terminal-name {
-  font-size: var(--text-lg);
   font-weight: 600;
-  color: var(--text-primary);
-  font-family: var(--font-mono);
+  color: #fff;
 }
 
 .connection-badge {
-  font-size: var(--text-xs);
-  font-weight: 600;
+  font-size: 0.75rem;
 }
 
 .header-right {
   display: flex;
   align-items: center;
-  gap: var(--spacing-xl);
+  gap: 1rem;
 }
 
 .terminal-stats {
   display: flex;
-  gap: var(--spacing-lg);
+  gap: 1rem;
 }
 
 .stat-item {
   display: flex;
   align-items: center;
-  gap: var(--spacing-xs);
-  font-size: var(--text-sm);
-  color: var(--text-secondary);
-}
-
-.stat-item i {
-  font-size: var(--text-sm);
-  color: var(--primary-500);
+  gap: 0.5rem;
+  color: #ccc;
+  font-size: 0.9rem;
 }
 
 .control-buttons {
   display: flex;
-  gap: var(--spacing-sm);
+  gap: 0.5rem;
 }
 
 .control-btn {
-  transition: all var(--transition-fast);
+  background: #404040 !important;
+  border: 1px solid #555 !important;
+  color: #fff !important;
+  width: 36px !important;
+  height: 36px !important;
 }
 
 .control-btn:hover {
-  transform: translateY(-1px);
+  background: #555 !important;
 }
 
-/* 主内容区域 */
 .terminal-main {
   flex: 1;
-  padding: var(--spacing-lg);
+  display: flex;
   overflow: hidden;
 }
 
-/* 加载状态 */
 .loading-container {
+  flex: 1;
   display: flex;
-  justify-content: center;
   align-items: center;
-  height: 400px;
+  justify-content: center;
 }
 
 .loading-content {
@@ -603,143 +648,105 @@ const formatOutputLine = (line: string) => {
 }
 
 .loading-spinner {
-  font-size: var(--text-4xl);
-  color: var(--primary-500);
-  margin-bottom: var(--spacing);
+  font-size: 2rem;
+  margin-bottom: 1rem;
 }
 
 .loading-text {
-  color: var(--text-secondary);
-  font-size: var(--text-lg);
+  color: #ccc;
 }
 
-/* 终端界面 */
 .terminal-interface {
-  display: grid;
-  grid-template-columns: 320px 1fr;
-  gap: var(--spacing-lg);
-  height: calc(100vh - 140px);
+  flex: 1;
+  display: flex;
+  overflow: hidden;
 }
 
-.terminal-container.fullscreen .terminal-interface {
-  height: calc(100vh - 80px);
-}
-
-/* 信息面板 */
 .info-panel {
-  transition: all var(--transition-normal);
+  width: 300px;
+  background: #252525;
+  border-right: 1px solid #404040;
+  transition: margin-left 0.3s ease;
 }
 
 .info-panel.collapsed {
-  display: none;
+  margin-left: -300px;
 }
 
 .info-card {
-  height: fit-content;
-  box-shadow: var(--shadow-md);
-  border-radius: var(--radius-xl);
-  overflow: hidden;
+  margin: 1rem;
+  background: #2d2d2d !important;
+  border: 1px solid #404040 !important;
 }
 
 .panel-title {
   display: flex;
   align-items: center;
-  gap: var(--spacing-sm);
-  font-weight: 600;
-}
-
-.panel-title i {
-  color: var(--primary-500);
+  gap: 0.5rem;
+  color: #fff;
 }
 
 .info-content {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing);
+  gap: 0.75rem;
 }
 
 .info-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: var(--spacing-sm) 0;
-  border-bottom: 1px solid var(--border-light);
-}
-
-.info-item:last-child {
-  border-bottom: none;
 }
 
 .info-label {
   display: flex;
   align-items: center;
-  gap: var(--spacing-sm);
-  font-size: var(--text-sm);
-  color: var(--text-secondary);
-  font-weight: 500;
-}
-
-.info-label i {
-  font-size: var(--text-sm);
-  color: var(--primary-500);
+  gap: 0.5rem;
+  color: #ccc;
+  font-size: 0.9rem;
 }
 
 .info-value {
-  font-size: var(--text-sm);
-  color: var(--text-primary);
-  font-weight: 500;
-  font-family: var(--font-mono);
-  max-width: 150px;
+  color: #fff;
+  font-size: 0.9rem;
+  font-family: monospace;
 }
 
-.info-value.truncate {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* 终端输出区域 */
 .terminal-output-section {
+  flex: 1;
   display: flex;
   flex-direction: column;
+  padding: 1rem;
 }
 
 .terminal-window {
-  background: var(--bg-primary);
-  border-radius: var(--radius-xl);
-  overflow: hidden;
-  box-shadow: var(--shadow-lg);
+  flex: 1;
   display: flex;
   flex-direction: column;
-  height: 100%;
+  background: #000000;
+  border: 1px solid #404040;
+  border-radius: 8px;
+  overflow: hidden;
 }
 
-/* 终端标题栏 */
 .terminal-titlebar {
-  background: var(--bg-dark);
-  color: var(--text-inverse);
-  padding: var(--spacing-sm) var(--spacing);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: var(--text-sm);
+  padding: 0.5rem 1rem;
+  background: #2d2d2d;
+  border-bottom: 1px solid #404040;
 }
 
 .window-controls {
   display: flex;
-  gap: var(--spacing-xs);
+  gap: 0.5rem;
 }
 
 .control {
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  cursor: pointer;
-  transition: opacity var(--transition-fast);
-}
-
-.control:hover {
-  opacity: 0.8;
 }
 
 .control-close {
@@ -757,284 +764,69 @@ const formatOutputLine = (line: string) => {
 .window-title {
   display: flex;
   align-items: center;
-  gap: var(--spacing-sm);
-  font-weight: 500;
+  gap: 0.5rem;
+  color: #fff;
+  font-size: 0.9rem;
 }
 
 .window-actions {
   display: flex;
   align-items: center;
-  gap: var(--spacing);
 }
 
 .action-item {
-  font-size: var(--text-xs);
-  opacity: 0.8;
+  color: #ccc;
+  font-size: 0.8rem;
 }
 
-/* 终端输出 */
-.terminal-output {
+.terminal-container-wrapper {
   flex: 1;
-  background: var(--bg-dark);
-  color: var(--text-inverse);
-  padding: var(--spacing);
-  font-family: var(--font-mono);
-  font-size: var(--text-sm);
-  line-height: var(--leading-relaxed);
-  overflow-y: auto;
-  min-height: 300px;
-  transition: all var(--transition-normal);
+  padding: 1rem;
+  background: #000000;
 }
 
-.terminal-output.empty {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+/* xterm.js样式覆盖 */
+:deep(.xterm) {
+  height: 100% !important;
+  background: #000000 !important;
 }
 
-.empty-output {
-  text-align: center;
-  color: var(--text-tertiary);
+:deep(.xterm-viewport) {
+  background: #000000 !important;
 }
 
-.empty-output i {
-  font-size: var(--text-4xl);
-  margin-bottom: var(--spacing);
-  opacity: 0.5;
+:deep(.xterm-screen) {
+  background: #000000 !important;
 }
 
-.empty-output p {
-  font-size: var(--text-lg);
-  margin: 0 0 var(--spacing-xs) 0;
+/* 隐藏xterm.js的辅助元素 */
+:deep(.xterm-helper-textarea) {
+  position: absolute !important;
+  left: -9999px !important;
+  top: -9999px !important;
+  width: 0 !important;
+  height: 0 !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
 }
 
-.empty-output small {
-  font-size: var(--text-sm);
-  opacity: 0.7;
+:deep(.xterm-char-measure-element) {
+  position: absolute !important;
+  left: -99999px !important;
+  top: -99999px !important;
+  width: 0 !important;
+  height: 0 !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+  display: none !important;
+  font-size: 0 !important;
+  line-height: 0 !important;
+  z-index: -9999 !important;
 }
 
-.output-content {
-  white-space: pre-wrap;
-  word-wrap: break-word;
-}
-
-.output-line {
-  margin-bottom: var(--spacing-xs);
-  animation: slideIn var(--transition-fast) ease-out;
-}
-
-.command-line {
-  color: var(--success-400);
-  font-weight: 600;
-}
-
-/* 命令输入区域 */
-.terminal-input {
-  background: var(--bg-dark);
-  border-top: 1px solid var(--border-dark);
-  padding: var(--spacing);
-  display: flex;
-  gap: var(--spacing);
-  align-items: center;
-}
-
-.input-prompt {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  flex: 1;
-}
-
-.prompt-symbol {
-  color: var(--success-400);
-  font-weight: 600;
-  font-size: var(--text-lg);
-}
-
-.command-input {
-  flex: 1;
-  background: transparent;
-  border: none;
-  outline: none;
-  color: var(--text-inverse);
-  font-family: var(--font-mono);
-  font-size: var(--text-sm);
-  padding: var(--spacing-xs) 0;
-}
-
-.command-input::placeholder {
-  color: var(--text-tertiary);
-}
-
-.command-input:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.send-btn {
-  transition: all var(--transition-fast);
-}
-
-.send-btn:hover:not(:disabled) {
-  transform: translateY(-1px);
-}
-
-/* 语法高亮 */
-:deep(.command-text) {
-  color: var(--success-400);
-  font-weight: 600;
-}
-
-:deep(.error-text) {
-  color: var(--danger-400);
-  font-weight: 600;
-}
-
-:deep(.warning-text) {
-  color: var(--warning-400);
-  font-weight: 600;
-}
-
-:deep(.success-text) {
-  color: var(--success-400);
-  font-weight: 600;
-}
-
-/* 动画定义 */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateX(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
-}
-
-/* 响应式设计 */
-@media (max-width: 1024px) {
-  .terminal-interface {
-    grid-template-columns: 1fr;
-    gap: var(--spacing);
-  }
-
-  .info-panel {
-    order: 2;
-  }
-
-  .terminal-output-section {
-    order: 1;
-  }
-
-  .terminal-stats {
-    display: none;
-  }
-}
-
-@media (max-width: 768px) {
-  .terminal-main {
-    padding: var(--spacing);
-  }
-
-  .terminal-header {
-    padding: var(--spacing);
-    flex-direction: column;
-    gap: var(--spacing);
-  }
-
-  .header-left,
-  .header-right {
-    width: 100%;
-    justify-content: center;
-  }
-
-  .terminal-title {
-    flex-direction: column;
-    text-align: center;
-    gap: var(--spacing-xs);
-  }
-
-  .control-buttons {
-    flex-wrap: wrap;
-    justify-content: center;
-  }
-
-  .terminal-window {
-    height: calc(100vh - 200px);
-  }
-}
-
-@media (max-width: 480px) {
-  .terminal-header {
-    padding: var(--spacing-sm);
-  }
-
-  .terminal-main {
-    padding: var(--spacing-sm);
-  }
-
-  .terminal-titlebar {
-    padding: var(--spacing-xs) var(--spacing-sm);
-  }
-
-  .terminal-output {
-    padding: var(--spacing-sm);
-    font-size: var(--text-xs);
-  }
-
-  .terminal-input {
-    padding: var(--spacing-sm);
-  }
-}
-
-/* 暗色模式支持 */
-@media (prefers-color-scheme: dark) {
-  .terminal-container {
-    background: var(--bg-dark-secondary);
-  }
-
-  .terminal-header {
-    background: var(--bg-dark-secondary);
-    border-color: var(--border-light);
-  }
-
-  .info-card {
-    background: var(--bg-dark-secondary);
-    border-color: var(--border-light);
-  }
-}
-
-/* 减少动画偏好支持 */
-@media (prefers-reduced-motion: reduce) {
-  .terminal-container,
-  .output-line,
-  .terminal-icon,
-  .back-btn,
-  .control-btn,
-  .send-btn {
-    animation: none;
-    transition: none;
-  }
+/* 隐藏页面底部可能的多余字符 */
+body > div:not(#app) {
+  display: none !important;
 }
 </style>

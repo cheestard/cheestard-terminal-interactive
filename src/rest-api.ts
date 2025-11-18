@@ -70,7 +70,7 @@ export class RestApiServer {
     });
 
     // 创建终端
-    this.app.post('/terminals', async (req: Request, res: Response): Promise<void> => {
+    this.app.post('/api/terminals', async (req: Request, res: Response): Promise<void> => {
       try {
         const input: CreateTerminalInput = req.body;
         const terminalId = await this.terminalManager.createTerminal(input);
@@ -100,7 +100,7 @@ export class RestApiServer {
     });
 
     // 列出所有终端
-    this.app.get('/terminals', async (req: Request, res: Response) => {
+    this.app.get('/api/terminals', async (req: Request, res: Response) => {
       try {
         const result = await this.terminalManager.listTerminals();
         res.json(result);
@@ -113,7 +113,7 @@ export class RestApiServer {
     });
 
     // 获取特定终端信息
-    this.app.get('/terminals/:terminalId', async (req: Request, res: Response): Promise<void> => {
+    this.app.get('/api/terminals/:terminalId', async (req: Request, res: Response): Promise<void> => {
       try {
         const terminalId = req.params.terminalId;
         if (!terminalId) {
@@ -148,7 +148,7 @@ export class RestApiServer {
     });
 
     // 向终端写入数据
-    this.app.post('/terminals/:terminalId/input', async (req: Request, res: Response): Promise<void> => {
+    this.app.post('/api/terminals/:terminalId/input', async (req: Request, res: Response): Promise<void> => {
       try {
         const terminalId = req.params.terminalId;
         const { input, appendNewline } = req.body as WriteTerminalInput;
@@ -187,7 +187,7 @@ export class RestApiServer {
     });
 
     // 读取终端输出（增强版）
-    this.app.get('/terminals/:terminalId/output', async (req: Request, res: Response) => {
+    this.app.get('/api/terminals/:terminalId/output', async (req: Request, res: Response) => {
       try {
         const { terminalId } = req.params;
         const since = req.query.since ? parseInt(req.query.since as string) : undefined;
@@ -215,7 +215,7 @@ export class RestApiServer {
     });
 
     // 获取终端统计信息
-    this.app.get('/terminals/:terminalId/stats', async (req: Request, res: Response) => {
+    this.app.get('/api/terminals/:terminalId/stats', async (req: Request, res: Response) => {
       try {
         const { terminalId } = req.params;
 
@@ -235,7 +235,7 @@ export class RestApiServer {
     });
 
     // 终止终端
-    this.app.delete('/terminals/:terminalId', async (req: Request, res: Response) => {
+    this.app.delete('/api/terminals/:terminalId', async (req: Request, res: Response) => {
       try {
         const { terminalId } = req.params;
         const signal = req.query.signal as string || 'SIGTERM';
@@ -255,7 +255,7 @@ export class RestApiServer {
     });
 
     // 调整终端大小
-    this.app.put('/terminals/:terminalId/resize', async (req: Request, res: Response): Promise<void> => {
+    this.app.put('/api/terminals/:terminalId/resize', async (req: Request, res: Response): Promise<void> => {
       try {
         const { terminalId } = req.params;
         const { cols, rows } = req.body;

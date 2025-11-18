@@ -32,11 +32,12 @@ export default defineConfig({
     transformer: 'postcss'
   },
   server: {
+    port: Number(process.env.FRONTEND_PORT) || 1107,
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:1107', // 后端服务器地址     
+        target: `http://127.0.0.1:${process.env.MCP_PORT || 1106}`, // MCP服务器地址
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, '/api'),     
+        rewrite: (path) => path.replace(/^\/api/, '/api'),
       },
     },
   },

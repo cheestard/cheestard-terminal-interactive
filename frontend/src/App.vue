@@ -1,8 +1,19 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import LanguageSwitcher from './components/LanguageSwitcher.vue'
+import Button from 'primevue/button'
+import { useTerminalStore } from './stores/terminal'
 
 const isLoaded = ref(false)
+const terminalStore = useTerminalStore()
+
+const refreshTerminals = () => {
+  terminalStore.refreshTerminals()
+}
+
+const createNewTerminal = () => {
+  terminalStore.createNewTerminal()
+}
 
 onMounted(() => {
   // 页面加载完成后添加动画
@@ -34,10 +45,24 @@ onMounted(() => {
                 <path d="M4 9h16M9 4v16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
             </div>
-            <h1 class="logo-text">Cheestard Terminal</h1>
+            <h1 class="logo-text">Cheestard Terminal Interactive</h1>
           </div>
           
           <div class="header-actions">
+            <Button
+              icon="pi pi-refresh"
+              label="刷新"
+              severity="secondary"
+              class="modern-btn-secondary"
+              @click="refreshTerminals"
+            />
+            <Button
+              icon="pi pi-plus"
+              label="创建新终端"
+              severity="primary"
+              class="modern-btn-primary"
+              @click="createNewTerminal"
+            />
             <LanguageSwitcher />
           </div>
         </div>
@@ -367,6 +392,8 @@ onMounted(() => {
 
 html {
   scroll-behavior: smooth;
+  height: 100%;
+  overflow: hidden;
 }
 
 body {
@@ -379,6 +406,8 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   transition: background-color var(--transition-normal), color var(--transition-normal);
+  height: 100%;
+  overflow: auto;
 }
 
 /* 自定义滚动条 */

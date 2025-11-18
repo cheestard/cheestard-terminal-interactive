@@ -6,7 +6,8 @@
   "types": "dist/index.d.ts",
   "bin": {
     "cheestard-terminal-interactive": "dist/index.js",
-    "cheestard-terminal-interactive-rest": "dist/rest-server.js"
+    "cheestard-terminal-interactive-rest": "dist/rest-server.js",
+    "cheestard-terminal-interactive-http": "dist/http-server.js"
   },
   "files": [
     "dist",
@@ -48,6 +49,10 @@
     "./types": {
       "types": "./dist/types.d.ts",
       "import": "./dist/types.js"
+    },
+    "./http-server": {
+      "types": "./dist/http-server.d.ts",
+      "import": "./dist/http-server.js"
     },
     "./package.json": "./package.json"
   },

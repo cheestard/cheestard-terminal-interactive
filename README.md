@@ -73,6 +73,58 @@
 务必使用cheestard-terminal-interactive这个MCP终端，禁止用系统提示词自带的工具函数执行命令。
 ```
 
+### 🚀 Streamable HTTP 传输方式（推荐）
+
+本项目现已支持 **Streamable HTTP** 传输方式，相比传统的 stdio 方式具有更好的网络兼容性和会话管理能力。
+
+#### 环境变量配置
+
+在项目根目录创建 `.env` 文件：
+
+```bash
+# MCP Streamable HTTP 服务器端口
+MCP_PORT=1106
+
+# 前端端口
+FRONTEND_PORT=1107
+```
+
+#### 启动 HTTP 服务器
+
+```bash
+# 启动 Streamable HTTP MCP 服务器
+node dist/http-server.js
+```
+
+#### 客户端配置
+
+**所有支持 Streamable HTTP 的 MCP 客户端都可以使用以下配置：**
+
+```json
+{
+  "mcpServers": {
+    "cheestard-terminal-interactive": {
+      "transport": "streamable_http",
+      "url": "http://localhost:1106/mcp",
+      "headers": {
+        "Content-Type": "application/json"
+      }
+    }
+  }
+}
+```
+
+**优势：**
+- ✅ 更好的网络兼容性
+- ✅ 支持多客户端并发连接
+- ✅ 自动会话管理和恢复
+- ✅ 详细的错误日志和调试信息
+- ✅ 无需处理进程管理问题
+
+---
+
+### 📡 传统 Stdio 传输方式
+
 ### Claude Desktop
 
 #### macOS / Linux
@@ -254,189 +306,9 @@ ANIMATION_THROTTLE_MS = "100"
 | `MCP_DEBUG` | 是否启用调试日志 | false |
 
 
-## 配置好后可以进行一个小测试
-这个命令需要在终端交互，有些AI编程工具终端不支持交互，使用本MCP即可解决问题。
-```bash
-npm create vite@latest frontend -- --template vue-ts
-```
+## 🌐 Web 管理界面打开
 
-## 🛠️ MCP 工具一览
-
-| 工具 | 作用 | 主要参数 |
-|------|------|----------|
-| `create_terminal` | 创建持久终端会话 | `shell`, `cwd`, `env`, `cols`, `rows` |
-| `create_terminal_basic` | 精简版创建入口 | `shell`, `cwd` |
-| `write_terminal` | 向终端写入命令 | `terminalId`, `input`, `appendNewline` |
-| `read_terminal` | 读取缓冲输出 | `terminalId`, `mode`, `since`, `stripSpinner` |
-| `wait_for_output` | 等待输出稳定 | `terminalId`, `timeout`, `stableTime` |
-| `get_terminal_stats` | 查看统计信息 | `terminalId` |
-| `list_terminals` | 列出所有活跃终端 | 无 |
-| `kill_terminal` | 终止会话 | `terminalId`, `signal` |
-| `open_terminal_ui` | 打开 Web 管理界面 | `port`, `autoOpen` |
-| `fix_bug_with_codex` 🆕 | 使用 Codex 自动修复 Bug | `description`, `cwd`, `timeout` |
-
-### 工具详细说明
-
-#### `create_terminal` - 创建终端
-创建一个新的持久化终端会话。
-
-**参数**：
-- `shell` (可选): Shell 类型，如 `/bin/bash`、`/bin/zsh`
-- `cwd` (可选): 工作目录
-- `env` (可选): 环境变量对象
-- `cols` (可选): 终端列数，默认 80
-- `rows` (可选): 终端行数，默认 24
-
-**返回**：
-- `terminalId`: 终端 ID
-- `status`: 状态
-- `pid`: 进程 ID
-- `shell`: Shell 类型
-- `cwd`: 工作目录
-
-#### `write_terminal` - 写入命令
-向终端发送命令或输入。
-
-**参数**：
-- `terminalId`: 终端 ID
-- `input`: 要发送的内容
-- `appendNewline` (可选): 是否自动添加换行符，默认 true
-
-**提示**：默认会自动添加换行符执行命令，如需发送原始控制字符（如方向键），请设置 `appendNewline: false`。
-
-#### `read_terminal` - 读取输出
-读取终端的缓冲输出，支持多种智能截断模式。
-
-**参数**：
-- `terminalId`: 终端 ID
-- `mode` (可选): 读取模式
-  - `full`: 完整输出（默认）
-  - `head`: 只读取开头
-  - `tail`: 只读取末尾
-  - `head-tail`: 同时读取开头和末尾
-- `since` (可选): 从第 N 行开始读取（增量读取）
-- `maxLines` (可选): 最大行数，默认 1000
-- `headLines` (可选): head 模式的行数，默认 50
-- `tailLines` (可选): tail 模式的行数，默认 50
-- `stripSpinner` (可选): 是否压缩 Spinner 动画
-
-**返回**：
-- `output`: 输出内容
-- `totalLines`: 总行数
-- `lineRange`: 实际返回的行范围
-- `estimatedTokens`: 估算的 token 数量
-- `truncated`: 是否被截断
-- `spinnerCompacted`: 是否进行了 Spinner 压缩
-
-#### `wait_for_output` - 等待输出稳定
-等待终端输出稳定后再读取，确保获取完整输出。
-
-**参数**：
-- `terminalId`: 终端 ID
-- `timeout` (可选): 最大等待时间（毫秒），默认 5000
-- `stableTime` (可选): 稳定时间（毫秒），默认 500
-
-**使用场景**：
-- 执行命令后确保获取完整输出
-- 等待交互式应用启动完成
-
-#### `fix_bug_with_codex` 🆕 - 自动修复 Bug
-使用 OpenAI Codex CLI 自动分析和修复代码中的 Bug。
-
-**参数**：
-- `description` (必需): 详细的 Bug 描述，必须包含：
-  - 问题症状（具体的错误行为）
-  - 期望行为（应该如何工作）
-  - 问题位置（文件路径、行号、函数名）
-  - 相关代码（有问题的代码片段）
-  - 根本原因（为什么会出现这个问题）
-  - 修复建议（如何修复）
-  - 影响范围（还会影响什么）
-  - 相关文件（所有相关的文件路径）
-  - 测试用例（如何验证修复是否有效）
-  - 上下文信息（有助于理解问题的背景）
-- `cwd` (可选): 工作目录，默认为当前目录
-- `timeout` (可选): 超时时间（毫秒），默认 600000（10 分钟）
-
-**返回**：
-- `terminalId`: 执行 Codex 的终端 ID
-- `reportPath`: 修复报告路径
-- `reportExists`: 报告是否存在
-- `workingDir`: 工作目录
-- `executionTime`: 执行时间（秒）
-- `timedOut`: 是否超时
-- `output`: 终端输出
-- `reportPreview`: 报告预览
-
-
-#### `fix_bug_with_codex` 🆕 - 使用 Codex 自动修复 Bug
-调用 OpenAI Codex CLI 自动分析和修复代码中的 bug，并生成详细的修复报告。
-
-**⚠️ 重要提示**：
-- 此工具使用 **完全权限模式**（`--sandbox danger-full-access --ask-for-approval never`）
-- Codex 可以完全控制代码库，请谨慎使用
-- 建议在使用前备份代码或使用版本控制
-
-**参数**：
-- `description` (必填): **详细的** bug 描述，必须包含：
-  - 问题现象（具体的错误表现）
-  - 预期行为（应该如何工作）
-  - 问题位置（文件路径、行号）
-  - 相关代码片段
-  - 根本原因（如果知道）
-  - 修复建议（如果有）
-  - 影响范围（可能影响的功能）
-  - 相关文件（所有相关文件路径）
-  - 测试用例（如何验证修复）
-  - 上下文信息（背景资料）
-- `cwd` (可选): 工作目录，默认当前目录
-- `timeout` (可选): 超时时间（毫秒），默认 600000（10分钟）
-
-**返回**：
-- `terminalId`: 执行 Codex 的终端 ID
-- `reportPath`: 修复报告的路径（`docs/codex-fix-TIMESTAMP.md`）
-- `reportExists`: 报告是否成功生成
-- `executionTime`: 执行时间
-- `output`: Codex 的终端输出
-
-## 🌐 Web 管理界面
-
-### 功能特性
-- 📊 **终端列表**：查看所有终端的状态、PID、Shell、工作目录等信息
-- 🖥️ **实时终端**：使用 xterm.js 渲染终端输出，支持 ANSI 颜色
-- ⚡ **实时更新**：WebSocket 推送，终端输出实时显示
-- ⌨️ **交互操作**：直接在浏览器中发送命令
-- 🎨 **VS Code 风格**：暗色主题，简洁美观
-- 🔄 **自动端口**：支持多实例，自动避免端口冲突
-
-### Web 管理界面快速使用
 对AI说：
 ```
-请打开MCP终端网页管理界面
+请调用open_terminal_ui工具
 ```
-
-或者直接运行测试脚本：
-```bash
-npm run test:webui
-```
-
-
-## 🔌 REST API（可选）
-
-如果需要 HTTP 接口，可启动 REST 版本：
-```bash
-npx cheestard-terminal-interactive-rest
-```
-
-服务器默认监听 `3001` 端口（可配置），端点与 MCP 工具一一对应：
-
-| 端点 | 方法 | 说明 |
-|------|------|------|
-| `/api/terminals` | POST | 创建终端 |
-| `/api/terminals` | GET | 列出所有终端 |
-| `/api/terminals/:id` | GET | 获取终端详情 |
-| `/api/terminals/:id` | DELETE | 终止终端 |
-| `/api/terminals/:id/input` | POST | 发送命令 |
-| `/api/terminals/:id/output` | GET | 读取输出 |
-| `/api/terminals/:id/stats` | GET | 获取统计信息 |
-

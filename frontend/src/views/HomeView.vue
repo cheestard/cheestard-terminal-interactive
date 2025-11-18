@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import Button from 'primevue/button'
@@ -9,16 +9,27 @@ import Toast from 'primevue/toast'
 import { useToast } from 'primevue/usetoast'
 import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
+import { useTerminalStore } from '../stores/terminal'
 
 const router = useRouter()
 const { t } = useI18n()
 const toast = useToast()
+const terminalStore = useTerminalStore()
 
 const terminals = ref<any[]>([])
 const isLoading = ref(true)
-const showCreateModal = ref(false)
 const newTerminalShell = ref('')
 const newTerminalCwd = ref('')
+
+// 使用store中的showCreateModal
+const showCreateModal = computed({
+  get: () => terminalStore.showCreateModal,
+  set: (value) => {
+    if (!value) {
+      terminalStore.closeCreateModal()
+    }
+  }
+})
 
 // 计算属性
 const stats = computed(() => ({
@@ -80,7 +91,7 @@ const createTerminal = async () => {
     // Reset form and close modal
     newTerminalShell.value = ''
     newTerminalCwd.value = ''
-    showCreateModal.value = false
+    terminalStore.closeCreateModal()
   } catch (error) {
     console.error('Error creating terminal:', error)
     toast.add({
@@ -167,8 +178,22 @@ const formatDate = (dateString: string) => {
   return `${diffDays} ${t('home.daysAgo')}`
 }
 
+// 监听刷新触发器
+watch(() => terminalStore.refreshTrigger, () => {
+  fetchTerminals()
+})
+
+// 监听创建触发器
+watch(() => terminalStore.createTrigger, () => {
+  // 创建触发器会自动设置showCreateModal为true
+})
+
 onMounted(() => {
   fetchTerminals()
+})
+
+onUnmounted(() => {
+  // 清理工作
 })
 </script>
 
@@ -176,37 +201,6 @@ onMounted(() => {
   <div class="dashboard-container">
     <Toast />
     
-    <!-- 页面标题区域 -->
-    <section class="hero-section">
-      <div class="hero-content">
-        <div class="hero-text">
-          <h1 class="hero-title">
-            <span class="hero-icon">🖥️</span>
-            {{ t('home.title') }}
-          </h1>
-          <p class="hero-description">
-            {{ t('home.description') }}
-          </p>
-        </div>
-        <div class="hero-actions">
-          <Button 
-            icon="pi pi-refresh" 
-            :label="t('home.refresh')" 
-            severity="secondary" 
-            class="modern-btn-secondary"
-            @click="fetchTerminals"
-          />
-          <Button 
-            icon="pi pi-plus" 
-            :label="t('home.createNewTerminal')" 
-            severity="primary" 
-            class="modern-btn-primary"
-            @click="showCreateModal = true"
-          />
-        </div>
-      </div>
-    </section>
-
     <!-- 统计卡片区域 -->
     <section class="stats-section">
       <div class="stats-grid">

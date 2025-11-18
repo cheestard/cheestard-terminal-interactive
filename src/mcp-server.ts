@@ -431,41 +431,6 @@ Fix tool: OpenAI Codex
       }
     );
 
-    // 基础版创建终端工具，适配无法传递复杂对象参数的客户端
-    this.server.tool(
-      'create_terminal_basic',
-      'Create a new Cheestard Terminal Interactive session (shell and cwd only). Useful for clients that cannot send env objects.',
-      {
-        shell: z.string().optional().describe('Shell to use (default: system default)'),
-        cwd: z.string().optional().describe('Working directory (default: current directory)')
-      },
-      {
-        title: 'Create Terminal (Basic)',
-        readOnlyHint: false
-      },
-      async ({ shell, cwd }): Promise<CallToolResult> => {
-        try {
-          return await this.createTerminalResponse(
-            {
-              shell: shell || undefined,
-              cwd: cwd || undefined
-            },
-            'basic'
-          );
-        } catch (error) {
-          return {
-            content: [
-              {
-                type: 'text',
-                text: `Error creating terminal: ${error instanceof Error ? error.message : String(error)}`
-              }
-            ],
-            isError: true
-          };
-        }
-      }
-    );
-
     // 写入终端工具
     this.server.tool(
       'write_terminal',
@@ -742,49 +707,6 @@ Fix tool: OpenAI Codex
               {
                 type: 'text',
                 text: `Error getting terminal stats: ${error instanceof Error ? error.message : String(error)}`
-              }
-            ],
-            isError: true
-          };
-        }
-      }
-    );
-
-    // 等待输出稳定工具
-    this.server.tool(
-      'wait_for_output',
-      'Wait for terminal output to stabilize. Useful after running commands to ensure all output is captured.',
-      {
-        terminalId: z.string().describe('Terminal session ID'),
-        timeout: z.number().optional().describe('Maximum time to wait in milliseconds (default: 5000)'),
-        stableTime: z.number().optional().describe('Time with no new output to consider stable in milliseconds (default: 500)')
-      },
-      {
-        title: 'Wait for Output',
-        readOnlyHint: true
-      },
-      async ({ terminalId, timeout, stableTime }): Promise<CallToolResult> => {
-        try {
-          await this.terminalManager.waitForOutputStable(
-            terminalId,
-            timeout || 5000,
-            stableTime || 500
-          );
-
-          return {
-            content: [
-              {
-                type: 'text',
-                text: `Output for terminal ${terminalId} has stabilized.`
-              }
-            ]
-          };
-        } catch (error) {
-          return {
-            content: [
-              {
-                type: 'text',
-                text: `Error waiting for output: ${error instanceof Error ? error.message : String(error)}`
               }
             ],
             isError: true

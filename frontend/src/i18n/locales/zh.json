@@ -21,9 +21,13 @@
   },
   "home": {
     "title": "Cheestard Terminal Interactive",
+    "description": "强大的终端管理工具，让您轻松管理多个终端会话",
+    "refresh": "刷新",
     "totalTerminals": "总终端数",
     "activeTerminals": "活跃终端",
     "idleTerminals": "空闲终端",
+    "inactiveTerminals": "非活跃终端",
+    "terminatedTerminals": "已终止终端",
     "systemStatus": "系统状态",
     "normal": "正常",
     "newTerminal": "新建终端",
@@ -49,7 +53,8 @@
     "workingDirectory": "工作目录 (可选)",
     "directoryPlaceholder": "例如: /home/user 或 C:\\Users",
     "directoryHint": "留空将使用当前工作目录",
-    "createTerminalBtn": "创建终端"
+    "createTerminalBtn": "创建终端",
+    "create": "创建"
   },
   "terminal": {
     "backToList": "返回终端列表",

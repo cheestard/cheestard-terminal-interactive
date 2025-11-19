@@ -715,58 +715,6 @@ Fix tool: OpenAI Codex
       }
     );
 
-    // 打开终端管理 UI 工具
-    this.server.tool(
-      'open_terminal_ui',
-      'Open a web-based terminal management UI in the browser. This provides a visual interface to manage all terminal sessions.',
-      {
-        autoOpen: z.boolean().optional().describe('Automatically open browser (default: true)')
-      },
-      {
-        title: 'Open Terminal UI',
-        readOnlyHint: true
-      },
-      async ({ autoOpen }): Promise<CallToolResult> => {
-        try {
-          const startOptions: any = {
-            autoOpen: autoOpen !== false,
-            terminalManager: this.terminalManager
-          };
-          const result = await this.webUiManager.start(startOptions);
-
-          const lines = [
-            'Terminal UI started successfully!',
-            '',
-            `🌐 URL: ${result.url}`,
-            `📡 Port: ${result.port}`,
-            `📊 Mode: ${result.mode}`,
-            '',
-            result.autoOpened
-              ? '✓ Browser opened automatically'
-              : '→ Please open the URL in your browser manually'
-          ];
-
-          return {
-            content: [
-              {
-                type: 'text',
-                text: lines.join('\n')
-              }
-            ]
-          };
-        } catch (error) {
-          return {
-            content: [
-              {
-                type: 'text',
-                text: `Error starting terminal UI: ${error instanceof Error ? error.message : String(error)}`
-              }
-            ],
-            isError: true
-          };
-        }
-      }
-    );
 
     // Codex Bug Fix Tool
     this.server.tool(
@@ -1121,32 +1069,23 @@ Would you like specific help with your issue?`
    * 设置事件处理器
    */
   private setupEventHandlers(): void {
-    // 监听终端事件并记录日志（仅在调试模式下）
+    // 监听终端事件并记录日志
     // 使用 stderr 避免污染 stdio JSON-RPC 通道
-    const debug = process.env.MCP_DEBUG === 'true';
 
     this.terminalManager.on('terminalCreated', (terminalId, session) => {
-      if (debug) {
-        process.stderr.write(`[MCP-DEBUG] Terminal created: ${terminalId} (PID: ${session.pid})\n`);
-      }
+      process.stderr.write(`[MCP-INFO] Terminal created: ${terminalId} (PID: ${session.pid})\n`);
     });
 
     this.terminalManager.on('terminalExit', (terminalId, exitCode, signal) => {
-      if (debug) {
-        process.stderr.write(`[MCP-DEBUG] Terminal exited: ${terminalId} (code: ${exitCode}, signal: ${signal})\n`);
-      }
+      process.stderr.write(`[MCP-INFO] Terminal exited: ${terminalId} (code: ${exitCode}, signal: ${signal})\n`);
     });
 
     this.terminalManager.on('terminalKilled', (terminalId, signal) => {
-      if (debug) {
-        process.stderr.write(`[MCP-DEBUG] Terminal killed: ${terminalId} (signal: ${signal})\n`);
-      }
+      process.stderr.write(`[MCP-INFO] Terminal killed: ${terminalId} (signal: ${signal})\n`);
     });
 
     this.terminalManager.on('terminalCleaned', (terminalId) => {
-      if (debug) {
-        process.stderr.write(`[MCP-DEBUG] Terminal cleaned up: ${terminalId}\n`);
-      }
+      process.stderr.write(`[MCP-INFO] Terminal cleaned up: ${terminalId}\n`);
     });
   }
 
@@ -1168,16 +1107,12 @@ Would you like specific help with your issue?`
    * 关闭服务器
    */
   async shutdown(): Promise<void> {
-    if (process.env.MCP_DEBUG === 'true') {
-      process.stderr.write('[MCP-DEBUG] Shutting down MCP server...\n');
-    }
+    process.stderr.write('[MCP-INFO] Shutting down MCP server...\n');
 
     // 关闭 Web UI
     await this.webUiManager.stop();
 
     await this.terminalManager.shutdown();
-    if (process.env.MCP_DEBUG === 'true') {
-      process.stderr.write('[MCP-DEBUG] MCP server shutdown complete\n');
-    }
+    process.stderr.write('[MCP-INFO] MCP server shutdown complete\n');
   }
 }

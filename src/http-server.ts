@@ -42,12 +42,11 @@ export type {
 } from './types.js';
 
 /**
- * 日志输出函数
+ * 日志输出函数 - 始终输出到 stderr
+ * HTTP 服务器使用 stderr 避免污染响应输出
  */
 function log(message: string) {
-  if (process.env.MCP_DEBUG === 'true') {
-    console.log(`[HTTP-MCP-DEBUG] ${message}`);
-  }
+  process.stderr.write(`[HTTP-MCP-INFO] ${message}\n`);
 }
 
 /**
@@ -57,6 +56,21 @@ async function main() {
   log('Starting Cheestard Terminal Interactive Streamable HTTP MCP Server...');
 
   const app = express();
+  
+  // 添加 CORS 支持以允许跨域请求
+  app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, mcp-session-id, Accept');
+    res.header('Access-Control-Expose-Headers', 'mcp-session-id');
+    
+    if (req.method === 'OPTIONS') {
+      res.sendStatus(200);
+      return;
+    }
+    next();
+  });
+  
   app.use(express.json());
 
   // Map to store transports by session ID
@@ -80,21 +94,22 @@ async function main() {
         // New initialization request
         log('Creating new session and MCP server');
         
+        // Create MCP server instance first
+        mcpServer = new CheestardTerminalInteractiveServer();
+        const server = mcpServer.getServer();
+        
         transport = new StreamableHTTPServerTransport({
           sessionIdGenerator: () => randomUUID(),
           onsessioninitialized: (newSessionId) => {
-            // Store the transport by session ID
+            // Store the transport and MCP server by session ID
             transports[newSessionId] = transport;
+            mcpServers[newSessionId] = mcpServer;
             log(`Session initialized: ${newSessionId}`);
           },
-          // Enable DNS rebinding protection for security
-          enableDnsRebindingProtection: true,
-          allowedHosts: ['127.0.0.1', 'localhost'],
+          // Disable DNS rebinding protection to allow localhost connections
+          enableDnsRebindingProtection: false,
+          allowedHosts: ['127.0.0.1', 'localhost', 'localhost:1106'],
         });
-
-        // Create MCP server instance
-        mcpServer = new CheestardTerminalInteractiveServer();
-        const server = mcpServer.getServer();
 
         // Clean up transport when closed
         transport.onclose = () => {
@@ -104,11 +119,6 @@ async function main() {
             log(`Session closed: ${transport.sessionId}`);
           }
         };
-
-        // Store the MCP server
-        if (transport.sessionId) {
-          mcpServers[transport.sessionId] = mcpServer;
-        }
 
         // Connect to the MCP server
         await server.connect(transport);

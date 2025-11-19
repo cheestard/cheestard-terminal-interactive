@@ -35,9 +35,7 @@ export class WebUIServer {
 
     // 请求日志
     this.app.use((req, res, next) => {
-      if (process.env.MCP_DEBUG === 'true') {
-        process.stderr.write(`[WEB-UI] ${req.method} ${req.path}\n`);
-      }
+      process.stderr.write(`[WEB-UI] ${req.method} ${req.path}\n`);
       next();
     });
 
@@ -268,21 +266,15 @@ export class WebUIServer {
     this.wss.on('connection', (ws: WebSocket) => {
       this.clients.add(ws);
 
-      if (process.env.MCP_DEBUG === 'true') {
-        process.stderr.write('[WEB-UI] WebSocket client connected\n');
-      }
+      process.stderr.write('[WEB-UI] WebSocket client connected\n');
 
       ws.on('close', () => {
         this.clients.delete(ws);
-        if (process.env.MCP_DEBUG === 'true') {
-          process.stderr.write('[WEB-UI] WebSocket client disconnected\n');
-        }
+        process.stderr.write('[WEB-UI] WebSocket client disconnected\n');
       });
 
       ws.on('error', (error) => {
-        if (process.env.MCP_DEBUG === 'true') {
-          process.stderr.write(`[WEB-UI] WebSocket error: ${error}\n`);
-        }
+        process.stderr.write(`[WEB-UI] WebSocket error: ${error}\n`);
       });
     });
 
@@ -323,9 +315,7 @@ export class WebUIServer {
       this.httpServer = createServer(this.app);
       
       this.httpServer.listen(port, '127.0.0.1', () => {
-        if (process.env.MCP_DEBUG === 'true') {
-          process.stderr.write(`[WEB-UI] Server started on http://localhost:${port}\n`);
-        }
+        process.stderr.write(`[WEB-UI] Server started on http://localhost:${port}\n`);
         
         // 启动 WebSocket
         this.setupWebSocket();
@@ -359,9 +349,7 @@ export class WebUIServer {
       // 关闭 HTTP 服务器
       if (this.httpServer) {
         this.httpServer.close(() => {
-          if (process.env.MCP_DEBUG === 'true') {
-            process.stderr.write('[WEB-UI] Server stopped\n');
-          }
+          process.stderr.write('[WEB-UI] Server stopped\n');
           resolve();
         });
         this.httpServer = null;

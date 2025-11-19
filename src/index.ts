@@ -38,14 +38,12 @@ export type {
 } from './types.js';
 
 /**
- * 日志输出函数 - 只在调试模式下输出到 stderr
+ * 日志输出函数 - 始终输出到 stderr
  * MCP 使用 stdio 进行 JSON-RPC 通信，所以日志必须输出到 stderr
  */
 function log(message: string) {
-  if (process.env.MCP_DEBUG === 'true') {
-    // 使用 stderr 避免污染 stdio JSON-RPC 通道
-    process.stderr.write(`[MCP-DEBUG] ${message}\n`);
-  }
+  // 使用 stderr 避免污染 stdio JSON-RPC 通道
+  process.stderr.write(`[MCP-INFO] ${message}\n`);
 }
 
 /**

@@ -81,7 +81,6 @@
     "test:tools": "tsx src/examples/test-all-tools.ts",
     "test:fixes": "tsx src/examples/test-fixes.ts",
     "test:spinner": "jest spinner-detection.test.ts",
-    "test:webui": "tsx src/examples/test-web-ui.ts",
     "lint": "echo 'Linting not configured yet'",
     "format": "echo 'Formatting not configured yet'"
   },

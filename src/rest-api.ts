@@ -319,7 +319,7 @@ export class RestApiServer {
   /**
    * 启动服务器
    */
-  start(port = 3001): Promise<void> {
+  start(port = parseInt(process.env.MCP_PORT || '1106')): Promise<void> {
     return new Promise((resolve, reject) => {
       this.server = this.app.listen(port, (error?: any) => {
         if (error) {

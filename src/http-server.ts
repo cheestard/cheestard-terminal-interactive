@@ -6,6 +6,8 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
 import { CheestardTerminalInteractiveServer } from './mcp-server.js';
+import { TerminalManager } from './terminal-manager.js';
+import { RestApiServer } from './rest-api.js';
 import { fileURLToPath } from 'url';
 import { realpathSync } from 'fs';
 
@@ -72,6 +74,18 @@ async function main() {
   });
   
   app.use(express.json());
+
+  // 创建终端管理器实例
+  const terminalManager = new TerminalManager({
+    maxBufferSize: parseInt(process.env.MAX_BUFFER_SIZE || '10000'),
+    sessionTimeout: parseInt(process.env.SESSION_TIMEOUT || '86400000'), // 24 hours
+  });
+
+  // 创建 REST API 服务器实例
+  const restApiServer = new RestApiServer(terminalManager);
+  
+  // 将 REST API 路由集成到主应用中
+  app.use('/', restApiServer.getApp());
 
   // Map to store transports by session ID
   const transports: { [sessionId: string]: StreamableHTTPServerTransport } = {};

@@ -196,14 +196,17 @@ async function killBackendProcesses() {
         // 跨平台查找node进程
         const processes = await findNodeProcesses();
         
-        // 过滤出相关的后端进程
+        // 过滤出相关的后端进程，但避免误杀当前启动链中的进程
         const backendProcesses = processes.filter(process => {
-            return parseInt(process.pid) !== currentPid && (
-                process.commandLine.includes('dist/http-server.js') ||
-                process.commandLine.includes('node') && process.commandLine.includes('dist/http-server.js') ||
-                process.commandLine.includes('start_be_cheestard-terminal-interactive.mjs') ||
-                process.commandLine.includes(`:${PORT}`) ||
-                process.commandLine.includes('cheestard-terminal-interactive')
+            const processPid = parseInt(process.pid);
+            if (processPid === currentPid) return false;
+            
+            const cmdLine = process.commandLine;
+            // 更精确的过滤条件，避免误杀正常启动的进程
+            return (
+                (cmdLine.includes('dist/http-server.js') && !cmdLine.includes('start_be_cheestard-terminal-interactive.mjs')) ||
+                (cmdLine.includes('dist/index.js') && !cmdLine.includes('start_be_cheestard-terminal-interactive.mjs')) ||
+                (cmdLine.includes(`:${PORT}`) && cmdLine.includes('node') && !cmdLine.includes('start_be_cheestard-terminal-interactive.mjs'))
             );
         });
         

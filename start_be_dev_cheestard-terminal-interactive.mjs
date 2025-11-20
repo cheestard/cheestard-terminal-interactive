@@ -137,11 +137,9 @@ async function killBackendProcesses() {
                 
                 // Find backend-related processes, but exclude current process
                 if (commandLine && parseInt(processId) !== currentPid && (
-                    commandLine.includes('dist/index.js') ||
-                    commandLine.includes('node') && commandLine.includes('dist/index.js') ||
-                    commandLine.includes('start_be_dev_cheestard-terminal-interactive.mjs') ||
-                    commandLine.includes(`:${PORT}`) ||
-                    commandLine.includes('cheestard-terminal-interactive')
+                    (commandLine.includes('dist/index.js') && !commandLine.includes('start_be_dev_cheestard-terminal-interactive.mjs')) ||
+                    (commandLine.includes('dist/http-server.js') && !commandLine.includes('start_be_dev_cheestard-terminal-interactive.mjs')) ||
+                    (commandLine.includes(`:${PORT}`) && commandLine.includes('node') && !commandLine.includes('start_be_dev_cheestard-terminal-interactive.mjs'))
                 )) {
                     processes.push({
                         pid: parseInt(processId),

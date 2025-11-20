@@ -25,10 +25,21 @@ function checkAndSetNodeVersion() {
       fnmProcess.on('close', (code) => {
         if (code === 0) {
           console.log(`已切换到 Node.js v${requiredVersion}`);
+          // 添加防递归重启检查，避免无限循环
+          const restartCount = parseInt(process.env.FE_DEV_RESTART_COUNT || '0');
+          if (restartCount >= 2) {
+            console.error('检测到多次重启，停止自动重启以避免递归问题');
+            process.exit(1);
+          }
+          
           // 重新启动脚本以使用新的 Node.js 版本
           const newProcess = spawn(process.argv[0], process.argv.slice(1), {
             stdio: 'inherit',
-            shell: true
+            shell: true,
+            env: {
+              ...process.env,
+              FE_DEV_RESTART_COUNT: (restartCount + 1).toString()
+            }
           });
           newProcess.on('close', (code) => {
             process.exit(code);
@@ -102,7 +113,7 @@ function loadEnvConfig() {
 }
 
 const config = loadEnvConfig();
-const PORT = parseInt(config.FRONTEND_PORT) || 5173;
+const PORT = parseInt(config.FRONTEND_PORT);
 
 // 跨平台执行命令函数
 function execCommand(command) {

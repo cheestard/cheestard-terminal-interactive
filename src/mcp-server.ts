@@ -395,21 +395,24 @@ Fix tool: OpenAI Codex
    */
   private setupTools(): void {
     // 创建终端工具
+    // 创建终端工具
     this.server.tool(
       'create_terminal',
-      'Create a new Cheestard Terminal Interactive session',
+      'Create a new Cheestard Terminal Interactive session. Can directly execute a command and wait for results.',
       {
         shell: z.string().optional().describe('Shell to use (default: system default)'),
         cwd: z.string().optional().describe('Working directory (default: current directory)'),
-        env: z.record(z.string()).optional().describe('Environment variables')
+        env: z.record(z.string()).optional().describe('Environment variables'),
+        command: z.string().optional().describe('Command to execute immediately after creating terminal'),
+        waitForOutput: z.number().optional().describe('Wait time in seconds for command output (e.g., 0.5 for 500ms). If not provided, no waiting.')
       },
       {
         title: 'Create Terminal',
         readOnlyHint: false
       },
-      async ({ shell, cwd, env }): Promise<CallToolResult> => {
+      async ({ shell, cwd, env, command, waitForOutput }): Promise<CallToolResult> => {
         try {
-          return await this.createTerminalResponse(
+          const result = await this.createTerminalResponse(
             {
               shell: shell || undefined,
               cwd: cwd || undefined,
@@ -417,6 +420,53 @@ Fix tool: OpenAI Codex
             },
             'default'
           );
+
+          // 如果提供了命令，则执行并等待输出
+          if (command) {
+            const terminalId = result.structuredContent?.terminalId as string;
+            if (terminalId) {
+              // 发送命令到终端
+              await this.terminalManager.writeToTerminal({
+                terminalId,
+                input: command,
+                appendNewline: true
+              });
+
+              // 如果指定了等待时间，则等待并读取输出
+              if (waitForOutput && waitForOutput > 0) {
+                const waitTimeMs = Math.round(waitForOutput * 1000);
+                await new Promise(resolve => setTimeout(resolve, waitTimeMs));
+
+                // 读取命令输出
+                const outputResult = await this.terminalManager.readFromTerminal({
+                  terminalId,
+                  mode: 'tail',
+                  tailLines: 50
+                });
+
+                // 更新返回结果，包含命令输出
+                const outputText = (result.content[0]?.type === 'text') ? result.content[0].text : '';
+                const newOutputText = `${outputText}\n\n--- Command Output ---\n${outputResult.output}\n--- End of Command Output ---`;
+
+                return {
+                  content: [
+                    {
+                      type: 'text',
+                      text: newOutputText
+                    }
+                  ],
+                  structuredContent: {
+                    ...result.structuredContent,
+                    commandExecuted: command,
+                    commandOutput: outputResult.output,
+                    waitForOutput: waitForOutput
+                  }
+                } as CallToolResult;
+              }
+            }
+          }
+
+          return result;
         } catch (error) {
           return {
             content: [
@@ -430,21 +480,21 @@ Fix tool: OpenAI Codex
         }
       }
     );
-
     // 写入终端工具
     this.server.tool(
       'write_terminal',
-      'Write input to a terminal session. Commands add a newline by default, but you can disable that for raw control sequences.',
+      'Write input to a terminal session. Can wait for command output and return results directly.',
       {
         terminalId: z.string().describe('Terminal session ID'),
         input: z.string().describe('Input to send to the terminal. Newline will be automatically added if not present to execute the command.'),
-        appendNewline: z.boolean().optional().describe('Whether to automatically append a newline (default: true). Set to false for raw control sequences like Ctrl+U or backspace.')
+        appendNewline: z.boolean().optional().describe('Whether to automatically append a newline (default: true). Set to false for raw control sequences like Ctrl+U or backspace.'),
+        waitForOutput: z.number().optional().describe('Wait time in seconds for command output (e.g., 0.5 for 500ms). If not provided, no waiting.')
       },
       {
         title: 'Write to Terminal',
         readOnlyHint: false
       },
-      async ({ terminalId, input, appendNewline }): Promise<CallToolResult> => {
+      async ({ terminalId, input, appendNewline, waitForOutput }): Promise<CallToolResult> => {
         try {
           const writeOptions: any = {
             terminalId,
@@ -455,14 +505,44 @@ Fix tool: OpenAI Codex
           }
           await this.terminalManager.writeToTerminal(writeOptions);
 
+          let responseText = `Input sent to terminal ${terminalId} successfully.`;
+          let structuredContent: any = {
+            terminalId,
+            input,
+            appendNewline
+          };
+
+          // 如果指定了等待时间，则等待并读取输出
+          if (waitForOutput && waitForOutput > 0) {
+            const waitTimeMs = Math.round(waitForOutput * 1000);
+            await new Promise(resolve => setTimeout(resolve, waitTimeMs));
+
+            // 读取命令输出
+            const outputResult = await this.terminalManager.readFromTerminal({
+              terminalId,
+              mode: 'tail',
+              tailLines: 50
+            });
+
+            // 更新返回结果，包含命令输出
+            responseText = `Input sent to terminal ${terminalId} successfully.\n\n--- Command Output ---\n${outputResult.output}\n--- End of Command Output ---`;
+
+            structuredContent = {
+              ...structuredContent,
+              waitForOutput,
+              commandOutput: outputResult.output
+            };
+          }
+
           return {
             content: [
               {
                 type: 'text',
-                text: `Input sent to terminal ${terminalId} successfully.`
+                text: responseText
               }
-            ]
-          };
+            ],
+            structuredContent: structuredContent
+          } as CallToolResult;
         } catch (error) {
           return {
             content: [
@@ -958,14 +1038,16 @@ This MCP server provides Cheestard Terminal Interactive session management. Here
 ## Available Tools:
 
 ### 1. create_terminal
-Creates a new Cheestard Terminal Interactive session.
-- Parameters: shell (optional), cwd (optional), env (optional)
-- Returns: terminalId, status, pid, shell, cwd
+Creates a new Cheestard Terminal Interactive session. Can directly execute commands and get results.
+- Parameters: shell (optional), cwd (optional), env (optional), command (optional), waitForOutput (optional)
+- Enhanced Feature: Pass 'command' parameter to execute immediately, and 'waitForOutput' (in seconds) to get results directly
+- Returns: terminalId, status, pid, shell, cwd, and command output if requested
 
 ### 2. write_terminal
-Sends input to a terminal session.
-- Parameters: terminalId (required), input (required)
-- Use this to execute commands or send interactive input
+Sends input to a terminal session and can wait for command output.
+- Parameters: terminalId (required), input (required), waitForOutput (optional)
+- Enhanced Feature: Pass 'waitForOutput' (in seconds) to automatically wait and return command results
+- Use this to execute commands and get immediate results without separate read_terminal calls
 
 ### 3. read_terminal
 Reads output from a terminal session.

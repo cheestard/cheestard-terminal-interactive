@@ -80,26 +80,17 @@ export class CheestardTerminalInteractiveServer {
 
   /**
    * 启动前端和后端服务
+   * 注意：禁用自动启动服务以避免递归调用问题
+   * MCP 服务器不应该启动自己的后端进程，这会导致无限递归
    */
   private startServices(): void {
-    // 启动后端服务器（使用编译后的 dist/index.js）
-    this.backendProcess = spawn('node', ['dist/index.js'], {
-      stdio: 'pipe',
-      shell: true,
-      cwd: process.cwd()
-    });
-
-    // 启动前端生产服务器
-    this.frontendProcess = spawn('node', ['start_fe_prod_frontend.mjs'], {
-      stdio: 'pipe',
-      shell: true,
-      cwd: process.cwd()
-    });
-
-    // 确保在 MCP 服务器关闭时也关闭这些服务
+    // 不在这里启动后端进程，避免递归调用
+    // 后端服务应该通过独立的启动脚本启动
+    console.log('[MCP-INFO] Services auto-start disabled to prevent recursion');
+    
+    // 确保在 MCP 服务器关闭时进行清理
     process.on('exit', () => {
-      this.backendProcess.kill();
-      this.frontendProcess.kill();
+      console.log('[MCP-INFO] MCP server shutting down');
     });
   }
 

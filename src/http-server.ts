@@ -215,9 +215,7 @@ async function main() {
     log('- terminal://output/{terminalId}: Terminal output');
     log('- terminal://stats: Manager statistics');
     log('');
-    log('Prompts available:');
-    log('- terminal-usage-guide: Usage guide');
-    log('- terminal-troubleshooting: Troubleshooting guide');
+    log('No prompts available');
     log('');
     log('Health check available at: http://${host}:${port}/health');
   });

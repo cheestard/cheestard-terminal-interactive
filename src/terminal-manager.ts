@@ -471,6 +471,17 @@ export class TerminalManager extends EventEmitter {
   }
 
   /**
+   * 获取终端的输出缓冲区 - 内部方法
+   * Get terminal's output buffer - internal method
+   */
+  getOutputBuffer(terminalName: string): OutputBuffer | null {
+    // 解析终端名称
+    // Resolve terminal name
+    const resolvedId = this.resolveTerminalName(terminalName);
+    return this.outputBuffers.get(resolvedId) || null;
+  }
+
+  /**
    * 检查终端是否正在运行命令 - 支持终端名称
    * Check if terminal is running command - supports terminal names
    * 通过检查最后一次活动时间来判断

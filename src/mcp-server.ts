@@ -429,6 +429,9 @@ Fix tool: OpenAI Codex
         appendNewline: z.boolean().optional().describe('Whether to automatically append a newline (default: true). Set to false for raw control sequences.'),
         waitForOutput: z.number().optional().describe('Wait time in seconds for command output (e.g., 0.5 for 500ms). If not provided, no waiting.'),
         
+        // 特殊操作参数 - Special operation parameters
+        specialOperation: z.enum(['ctrl_c', 'ctrl_z', 'ctrl_d']).optional().describe('Special operation to send to terminal (e.g., ctrl_c for interrupt). Use this instead of typing "Ctrl+C" in input field.'),
+        
         // 读取参数
         since: z.number().optional().describe('Line number to start reading from (default: 0)'),
         maxLines: z.number().optional().describe('Maximum number of lines to read (default: 1000)'),
@@ -444,7 +447,8 @@ Fix tool: OpenAI Codex
       async ({
         terminalId, shell, cwd, env,
         input, appendNewline, waitForOutput,
-        since, maxLines, mode, headLines, tailLines, stripSpinner
+        since, maxLines, mode, headLines, tailLines, stripSpinner,
+        specialOperation
       }): Promise<CallToolResult> => {
         try {
           let actualTerminalId = terminalId;
@@ -480,34 +484,99 @@ Fix tool: OpenAI Codex
             terminalCreated
           };
           
-          // 如果提供了输入，则发送到终端
-          if (input) {
+          // 检查是否在input字段中输入了"Ctrl+C"等字符串，如果是则返回警告
+          if (input && (input.toLowerCase().includes('ctrl+c') || input.toLowerCase().includes('ctrl c'))) {
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: `⚠️ 警告：检测到您在input字段中输入了"Ctrl+C"。
+
+正确的使用方法：
+- 使用 specialOperation: "ctrl_c" 参数来发送中断信号
+- 不要在input字段中输入"Ctrl+C"字符串
+
+示例：
+{
+  "terminalId": "your-terminal-id",
+  "specialOperation": "ctrl_c"
+}
+
+这样可以正确发送Ctrl+C中断信号到终端。`
+                }
+              ],
+              isError: true
+            } as CallToolResult;
+          }
+
+          // 处理特殊操作
+          let actualInput = input;
+          if (specialOperation) {
+            switch (specialOperation) {
+              case 'ctrl_c':
+                actualInput = '\u0003'; // ASCII码 for Ctrl+C
+                break;
+              case 'ctrl_z':
+                actualInput = '\u001a'; // ASCII码 for Ctrl+Z
+                break;
+              case 'ctrl_d':
+                actualInput = '\u0004'; // ASCII码 for Ctrl+D
+                break;
+            }
+          }
+
+          // 如果提供了输入或特殊操作，则发送到终端
+          if (actualInput) {
             const writeOptions: any = {
               terminalName: actualTerminalId,
-              input
+              input: actualInput
             };
             if (appendNewline !== undefined) {
               writeOptions.appendNewline = appendNewline;
             }
+            
+            // 在写入命令之前获取当前光标位置
+            let currentCursor = 0;
+            try {
+              // 获取输出缓冲区的最新sequence号，而不是行号
+              const outputBuffer = this.terminalManager.getOutputBuffer(actualTerminalId);
+              if (outputBuffer) {
+                const stats = outputBuffer.getStats();
+                // 读取最新的条目来获取当前sequence
+                const latestEntries = outputBuffer.getLatest(1);
+                if (latestEntries.length > 0 && latestEntries[0]) {
+                  currentCursor = latestEntries[0].sequence;
+                }
+              }
+            } catch (error) {
+              // 如果获取统计信息失败，使用0作为默认值
+              currentCursor = 0;
+            }
+            
             await this.terminalManager.writeToTerminal(writeOptions);
             
-            structuredContent.input = input;
+            structuredContent.input = actualInput;
             structuredContent.appendNewline = appendNewline;
+            if (specialOperation) {
+              structuredContent.specialOperation = specialOperation;
+            }
             
-            // 如果指定了等待时间，则等待并读取输出
-            if (waitForOutput && waitForOutput > 0) {
-              const waitTimeMs = Math.round(waitForOutput * 1000);
+            // 默认等待输出以确保能看到命令结果，除非明确指定不等待
+            const shouldWaitForOutput = waitForOutput !== undefined ? waitForOutput > 0 : true;
+            
+            // 如果指定了等待时间或使用默认等待，则等待并读取输出
+            if (shouldWaitForOutput) {
+              const waitTimeMs = waitForOutput && waitForOutput > 0 ? Math.round(waitForOutput * 1000) : 1000; // 默认等待1秒
               await new Promise(resolve => setTimeout(resolve, waitTimeMs));
               
-              // 使用智能读取模式或指定模式读取输出
               const readOptions: any = {
                 terminalName: actualTerminalId,
-                since: since || undefined,
-                maxLines: maxLines || undefined,
-                mode: mode || 'smart',
+                since: since !== undefined ? since : currentCursor, // 使用写入命令前的光标位置作为起始点
+                maxLines: maxLines || 1000,
+                mode: mode || 'smart', // 默认使用smart模式
                 headLines: headLines || undefined,
                 tailLines: tailLines || undefined,
-                stripSpinner: stripSpinner
+                stripSpinner: stripSpinner !== undefined ? stripSpinner : true
               };
               
               const outputResult = await this.terminalManager.readFromTerminal(readOptions);

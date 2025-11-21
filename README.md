@@ -207,3 +207,26 @@ node start_fe_cheestard-terminal-interactive.mjs
 | `COMPACT_ANIMATIONS` | 是否启用 Spinner 压缩 | true |
 | `ANIMATION_THROTTLE_MS` | 动画节流时间（毫秒） | 100 |
 | `DEFAULT_SHELL` | 默认Shell程序 | pwsh.exe |
+| `DISABLED_TOOLS` | 禁用的工具列表，用逗号分隔多个工具名称 | fix_bug_with_codex |
+
+### 🔧 工具禁用功能
+通过设置 `DISABLED_TOOLS` 环境变量，可以禁用特定的 MCP 工具。这对于安全考虑或特定使用场景很有用。
+
+**使用方法：**
+```bash
+# 禁用单个工具
+DISABLED_TOOLS=fix_bug_with_codex
+
+# 禁用多个工具（用逗号分隔）
+DISABLED_TOOLS=fix_bug_with_codex,chrome_mcp_chrome_screenshot,chrome_mcp_chrome_network_request
+```
+
+**可用的工具名称：**
+- `interact_with_terminal` - 终端交互工具
+- `fix_bug_with_codex` - Codex Bug 修复工具
+
+**注意事项：**
+- 工具名称不区分大小写
+- 多个工具名称用英文逗号分隔
+- 禁用的工具将不会在 MCP 服务器中注册
+- 修改此变量后需要重启服务器才能生效

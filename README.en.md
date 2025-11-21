@@ -204,3 +204,26 @@ node start_fe_cheestard-terminal-interactive.mjs
 | `COMPACT_ANIMATIONS` | Enable spinner compression | true |
 | `ANIMATION_THROTTLE_MS` | Animation throttle time (milliseconds) | 100 |
 | `DEFAULT_SHELL` | Default shell program | pwsh.exe |
+| `DISABLED_TOOLS` | List of disabled tools, separated by commas | fix_bug_with_codex |
+
+### 🔧 Tool Disabling Feature
+By setting the `DISABLED_TOOLS` environment variable, you can disable specific MCP tools. This is useful for security considerations or specific use cases.
+
+**Usage:**
+```bash
+# Disable a single tool
+DISABLED_TOOLS=fix_bug_with_codex
+
+# Disable multiple tools (comma-separated)
+DISABLED_TOOLS=fix_bug_with_codex,chrome_mcp_chrome_screenshot,chrome_mcp_chrome_network_request
+```
+
+**Available tool names:**
+- `interact_with_terminal` - Terminal interaction tool
+- `fix_bug_with_codex` - Codex Bug fix tool
+
+**Notes:**
+- Tool names are case-insensitive
+- Multiple tool names should be separated by commas
+- Disabled tools will not be registered in the MCP server
+- Server restart is required after modifying this variable

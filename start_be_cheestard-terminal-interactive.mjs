@@ -54,8 +54,31 @@ const __dirname = path.dirname(__filename);
 
 const PROJECT_DIR = path.resolve(__dirname);
 
+// 检查并复制.env文件（如果不存在）
+function ensureEnvFile() {
+  const envPath = path.join(__dirname, '.env');
+  const envExamplePath = path.join(__dirname, '.env.example');
+  
+  if (!existsSync(envPath)) {
+    if (existsSync(envExamplePath)) {
+      try {
+        const fs = require('fs');
+        fs.copyFileSync(envExamplePath, envPath);
+        console.log('✅ 已从.env.example复制创建.env文件');
+      } catch (error) {
+        console.warn('Warning: Could not copy .env.example to .env:', error.message);
+      }
+    } else {
+      console.warn('Warning: .env.example file not found');
+    }
+  }
+}
+
 // Load environment variables from .env file
 function loadEnvConfig() {
+  // 首先确保.env文件存在
+  ensureEnvFile();
+  
   const envPath = path.join(__dirname, '.env');
   const defaultConfig = {
     MCP_PORT: 1106,

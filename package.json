@@ -2,11 +2,10 @@
   "name": "cheestard-terminal-interactive",
   "version": "0.0.1",
   "description": "A tool for managing interactive terminal sessions.",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "dist/http-server.js",
+  "types": "dist/http-server.d.ts",
   "bin": {
-    "cheestard-terminal-interactive": "dist/index.js",
-    "cheestard-terminal-interactive-rest": "dist/rest-server.js",
+    "cheestard-terminal-interactive": "dist/http-server.js",
     "cheestard-terminal-interactive-http": "dist/http-server.js"
   },
   "files": [
@@ -19,12 +18,8 @@
   ],
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
-    },
-    "./rest-server": {
-      "types": "./dist/rest-server.d.ts",
-      "import": "./dist/rest-server.js"
+      "types": "./dist/http-server.d.ts",
+      "import": "./dist/http-server.js"
     },
     "./rest-api": {
       "types": "./dist/rest-api.d.ts",
@@ -59,11 +54,10 @@
   "type": "module",
   "scripts": {
     "build": "tsc",
-    "dev": "tsx src/index.ts",
-    "dev:rest": "tsx src/rest-server.ts",
-    "start": "node dist/index.js",
-    "start:debug": "node dist/index.js 2> mcp-server.log",
-    "start:rest": "node dist/rest-server.js",
+    "dev": "tsx src/http-server.ts",
+    "start": "node dist/http-server.js",
+    "start:debug": "node dist/http-server.js 2> mcp-server.log",
+    "start:http": "node dist/http-server.js",
     "test": "jest",
     "test:unit": "jest",
     "test:integration": "npm run test:integration:stdio && npm run test:integration:cursor && npm run test:integration:terminal",
@@ -97,6 +91,7 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
     "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
     "express": "^4.21.2",
     "node-pty": "^1.0.0",
     "uuid": "^9.0.1",

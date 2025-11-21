@@ -390,15 +390,22 @@ Fix tool: OpenAI Codex
    */
   private isToolDisabled(toolName: string): boolean {
     const disabledTools = process.env.DISABLED_TOOLS;
+    console.log(`[MCP-DEBUG] Checking if tool "${toolName}" is disabled. DISABLED_TOOLS="${disabledTools}"`);
+    
     if (!disabledTools) {
+      console.log(`[MCP-DEBUG] DISABLED_TOOLS is empty, tool "${toolName}" is enabled`);
       return false;
     }
     
     // 将逗号分隔的工具名称转换为数组，并去除空白字符
     const disabledList = disabledTools.split(',').map(tool => tool.trim().toLowerCase());
+    console.log(`[MCP-DEBUG] Disabled tools list:`, disabledList);
     
     // 检查当前工具名称是否在禁用列表中
-    return disabledList.includes(toolName.toLowerCase());
+    const isDisabled = disabledList.includes(toolName.toLowerCase());
+    console.log(`[MCP-DEBUG] Tool "${toolName}" is ${isDisabled ? 'DISABLED' : 'ENABLED'}`);
+    
+    return isDisabled;
   }
 
   /**

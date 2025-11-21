@@ -218,12 +218,8 @@ node start_fe_cheestard-terminal-interactive.mjs
 DISABLED_TOOLS=fix_bug_with_codex
 
 # 禁用多个工具（用逗号分隔）
-DISABLED_TOOLS=fix_bug_with_codex,chrome_mcp_chrome_screenshot,chrome_mcp_chrome_network_request
+DISABLED_TOOLS=fix_bug_with_codex,example_tool
 ```
-
-**可用的工具名称：**
-- `interact_with_terminal` - 终端交互工具
-- `fix_bug_with_codex` - Codex Bug 修复工具
 
 **注意事项：**
 - 工具名称不区分大小写

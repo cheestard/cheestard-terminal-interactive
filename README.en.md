@@ -215,12 +215,8 @@ By setting the `DISABLED_TOOLS` environment variable, you can disable specific M
 DISABLED_TOOLS=fix_bug_with_codex
 
 # Disable multiple tools (comma-separated)
-DISABLED_TOOLS=fix_bug_with_codex,chrome_mcp_chrome_screenshot,chrome_mcp_chrome_network_request
+DISABLED_TOOLS=fix_bug_with_codex,example_tool
 ```
-
-**Available tool names:**
-- `interact_with_terminal` - Terminal interaction tool
-- `fix_bug_with_codex` - Codex Bug fix tool
 
 **Notes:**
 - Tool names are case-insensitive

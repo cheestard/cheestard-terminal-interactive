@@ -380,10 +380,17 @@ async function startFrontend() {
     // 终止旧的前端进程
     await killFrontendProcesses();
     
-    console.log('Starting frontend development server...');
+    console.log('Starting frontend production server...');
 
-    // 启动前端开发服务器
-    const frontendProcess = spawn('npm', ['run', 'dev'], {
+    // 检查是否存在编译后的产物
+    const distPath = path.join(FRONTEND_DIR, 'dist');
+    if (!existsSync(distPath)) {
+      console.error('Error: Frontend build not found. Please run "node start_build_fe_cheestard-terminal-interactive.mjs" first.');
+      process.exit(1);
+    }
+
+    // 启动前端生产服务器（使用编译后的产物）
+    const frontendProcess = spawn('npm', ['run', 'preview'], {
       cwd: FRONTEND_DIR,
       stdio: 'inherit',
       shell: true,
@@ -395,15 +402,15 @@ async function startFrontend() {
 
     frontendProcess.on('close', (code) => {
       if (code === 0) {
-        console.log('Frontend development server stopped successfully.');
+        console.log('Frontend production server stopped successfully.');
       } else {
-        console.error(`Frontend development server exited with code ${code}`);
+        console.error(`Frontend production server exited with code ${code}`);
       }
       process.exit(code);
     });
 
     frontendProcess.on('error', (err) => {
-      console.error('Failed to start frontend development server:', err);
+      console.error('Failed to start frontend production server:', err);
       process.exit(1);
     });
     

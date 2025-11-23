@@ -82,7 +82,8 @@ export interface CommandSummary {
 
 export interface TerminalListResult {
   terminals: Array<{
-    id: string;
+    id: string;          // 用户提供的终端名称或UUID
+    internalId: string;  // 内部UUID，用于调试
     pid: number;
     shell: string;
     cwd: string;
@@ -179,10 +180,10 @@ export interface TerminalStatsResult {
   newestLine: number;
   isActive: boolean;
 }
-
 export interface ListTerminalsResult {
   terminals: Array<{
-    id: string;
+    id: string;          // 用户提供的终端名称或UUID
+    internalId: string;  // 内部UUID，用于调试
     pid: number;
     shell: string;
     cwd: string;

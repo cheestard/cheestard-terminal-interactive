@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import Button from 'primevue/button'
@@ -9,6 +9,9 @@ import Toast from 'primevue/toast'
 import { useToast } from 'primevue/usetoast'
 import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
+import VirtualScroller from 'primevue/virtualscroller'
+import { Terminal } from 'xterm'
+import { FitAddon } from 'xterm-addon-fit'
 import { useTerminalStore } from '../stores/terminal'
 
 const router = useRouter()
@@ -21,7 +24,11 @@ const isLoading = ref(true)
 const newTerminalShell = ref('')
 const newTerminalCwd = ref('')
 
-// 使用store中的showCreateModal
+// 终端相关状态
+const terminalInstances = ref<Map<string, { term: Terminal, fitAddon: FitAddon, ws: WebSocket }>>(new Map())
+const activeTerminalId = ref<string | null>(null)
+
+// 直接使用store中的showCreateModal，避免状态同步问题
 const showCreateModal = computed({
   get: () => terminalStore.showCreateModal,
   set: (value) => {
@@ -31,13 +38,8 @@ const showCreateModal = computed({
   }
 })
 
-// 计算属性
-const stats = computed(() => ({
-  total: terminals.value.length,
-  active: terminals.value.filter(t => t.status === 'active').length,
-  inactive: terminals.value.filter(t => t.status === 'inactive').length,
-  terminated: terminals.value.filter(t => t.status === 'terminated').length
-}))
+// 计算属性 - 使用store中的统计数据
+const stats = computed(() => terminalStore.stats)
 
 const fetchTerminals = async () => {
   try {
@@ -46,10 +48,17 @@ const fetchTerminals = async () => {
       throw new Error('Failed to fetch terminals')
     }
     const data = await response.json()
-    terminals.value = data.terminals || []
+    
+    // 使用后端返回的终端数据，不进行任何ID修改
+    const fetchedTerminals = data.terminals || []
+    
+    // 更新本地状态和store
+    terminals.value = fetchedTerminals
+    terminalStore.updateTerminals(fetchedTerminals)
   } catch (error) {
     console.error('Error fetching terminals:', error)
     terminals.value = []
+    terminalStore.updateTerminals([])
     toast.add({
       severity: 'error',
       summary: t('common.error'),
@@ -79,7 +88,12 @@ const createTerminal = async () => {
     }
 
     const newTerminal = await response.json()
+    
+    // 直接使用后端返回的数据，不修改ID
     terminals.value.unshift(newTerminal) // 添加到开头
+    
+    // 更新store中的终端列表
+    terminalStore.updateTerminals(terminals.value)
     
     toast.add({
       severity: 'success',
@@ -91,7 +105,7 @@ const createTerminal = async () => {
     // Reset form and close modal
     newTerminalShell.value = ''
     newTerminalCwd.value = ''
-    terminalStore.closeCreateModal()
+    handleCancelModal()
   } catch (error) {
     console.error('Error creating terminal:', error)
     toast.add({
@@ -103,8 +117,32 @@ const createTerminal = async () => {
   }
 }
 
+// 处理模态框关闭
+const handleCancelModal = () => {
+  terminalStore.closeCreateModal()
+}
+
+// 处理模态框可见性变化
+const handleModalVisibilityChange = (visible: boolean) => {
+  if (!visible) {
+    terminalStore.closeCreateModal()
+  }
+}
+
 const deleteTerminal = async (id: string) => {
   try {
+    // 先关闭终端实例
+    const terminalInstance = terminalInstances.value.get(id)
+    if (terminalInstance) {
+      if (terminalInstance.ws) {
+        terminalInstance.ws.close()
+      }
+      if (terminalInstance.term) {
+        terminalInstance.term.dispose()
+      }
+      terminalInstances.value.delete(id)
+    }
+
     const response = await fetch(`/api/terminals/${id}`, {
       method: 'DELETE',
     })
@@ -114,6 +152,9 @@ const deleteTerminal = async (id: string) => {
     }
 
     terminals.value = terminals.value.filter(t => t.id !== id)
+    
+    // 更新store中的终端列表
+    terminalStore.updateTerminals(terminals.value)
     
     toast.add({
       severity: 'success',
@@ -132,8 +173,159 @@ const deleteTerminal = async (id: string) => {
   }
 }
 
-const openTerminal = (id: string) => {
-  router.push(`/terminal/${id}`)
+// 初始化终端实例
+const initializeTerminal = async (terminalId: string) => {
+  if (terminalInstances.value.has(terminalId)) {
+    return // 已经初始化过了
+  }
+
+  try {
+    // 创建xterm实例
+    const term = new Terminal({
+      cursorBlink: true,
+      fontSize: 12,
+      fontFamily: 'Menlo, Monaco, "Courier New", monospace',
+      theme: {
+        background: '#000000',
+        foreground: '#ffffff',
+        cursor: '#ffffff',
+        selection: '#ffffff40'
+      },
+      convertEol: true,
+      rows: 15,
+      cols: 80
+    })
+
+    // 添加FitAddon
+    const fitAddon = new FitAddon()
+    term.loadAddon(fitAddon)
+
+    // 创建WebSocket连接 - 修复端口问题
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+    const host = window.location.host
+    // 如果前端运行在不同端口，需要指定WebSocket端口
+    // 使用127.0.0.1而不是localhost，确保与后端监听地址一致
+    const wsHost = host.includes(':1107') ? host.replace('localhost', '127.0.0.1') : '127.0.0.1:1107'
+    const wsUrl = `${protocol}//${wsHost}`
+    const ws = new WebSocket(wsUrl)
+
+    // WebSocket事件处理
+    ws.onopen = () => {
+      console.log(`WebSocket connected for terminal ${terminalId}`)
+    }
+
+    ws.onmessage = (event) => {
+      const message = JSON.parse(event.data)
+      if (message.terminalId === terminalId && message.type === 'output') {
+        term.write(message.data)
+      }
+    }
+
+    ws.onerror = (error) => {
+      console.error(`WebSocket error for terminal ${terminalId}:`, error)
+    }
+
+    ws.onclose = () => {
+      console.log(`WebSocket disconnected for terminal ${terminalId}`)
+    }
+
+    // 终端数据处理
+    term.onData((data) => {
+      sendTerminalInput(terminalId, data)
+    })
+
+    // 保存实例
+    terminalInstances.value.set(terminalId, { term, fitAddon, ws })
+
+    // 等待DOM更新后打开终端
+    await nextTick()
+    const container = document.getElementById(`terminal-${terminalId}`)
+    if (container) {
+      term.open(container)
+      fitAddon.fit()
+      
+      // 加载历史输出
+      loadTerminalOutput(terminalId)
+    }
+
+    // 监听窗口大小变化
+    window.addEventListener('resize', () => {
+      const instance = terminalInstances.value.get(terminalId)
+      if (instance) {
+        instance.fitAddon.fit()
+      }
+    })
+
+  } catch (error) {
+    console.error(`Failed to initialize terminal ${terminalId}:`, error)
+  }
+}
+
+// 加载终端历史输出
+const loadTerminalOutput = async (terminalId: string) => {
+  try {
+    const response = await fetch(`/api/terminals/${terminalId}/output`)
+    if (!response.ok) {
+      throw new Error('Failed to load output')
+    }
+    const data = await response.json()
+    
+    const instance = terminalInstances.value.get(terminalId)
+    if (instance && data.output) {
+      instance.term.write(data.output)
+    }
+  } catch (error) {
+    console.error(`Failed to load output for terminal ${terminalId}:`, error)
+  }
+}
+
+// 发送终端输入
+const sendTerminalInput = async (terminalId: string, input: string) => {
+  try {
+    const response = await fetch(`/api/terminals/${terminalId}/input`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ input })
+    })
+    
+    if (!response.ok) {
+      throw new Error('Failed to send input')
+    }
+  } catch (error) {
+    console.error(`Failed to send input to terminal ${terminalId}:`, error)
+  }
+}
+
+// 激活终端
+const activateTerminal = (terminalId: string) => {
+  activeTerminalId.value = terminalId
+  initializeTerminal(terminalId)
+}
+
+// 清空终端
+const clearTerminal = (terminalId: string) => {
+  const instance = terminalInstances.value.get(terminalId)
+  if (instance && instance.term) {
+    instance.term.clear()
+  }
+}
+
+// 重新连接终端
+const reconnectTerminal = (terminalId: string) => {
+  // 关闭现有连接
+  const instance = terminalInstances.value.get(terminalId)
+  if (instance && instance.ws) {
+    instance.ws.close()
+  }
+  if (instance && instance.term) {
+    instance.term.dispose()
+  }
+  terminalInstances.value.delete(terminalId)
+  
+  // 重新初始化
+  initializeTerminal(terminalId)
 }
 
 const getStatusSeverity = (status: string) => {
@@ -188,76 +380,45 @@ watch(() => terminalStore.createTrigger, () => {
   // 创建触发器会自动设置showCreateModal为true
 })
 
+// 监听模态框显示状态
+watch(() => showCreateModal.value, () => {
+  // 模态框状态变化
+})
+
 onMounted(() => {
   fetchTerminals()
 })
 
 onUnmounted(() => {
-  // 清理工作
+  // 清理所有终端实例
+  terminalInstances.value.forEach((instance) => {
+    if (instance.ws) {
+      instance.ws.close()
+    }
+    if (instance.term) {
+      instance.term.dispose()
+    }
+  })
+  terminalInstances.value.clear()
 })
+
+// 监听终端列表变化，自动初始化新终端
+watch(terminals, (newTerminals) => {
+  newTerminals.forEach(terminal => {
+    if (terminal.id && !terminalInstances.value.has(terminal.id)) {
+      // 延迟初始化，确保DOM已渲染
+      setTimeout(() => {
+        initializeTerminal(terminal.id)
+      }, 100)
+    }
+  })
+}, { deep: true })
 </script>
 
 <template>
   <div class="dashboard-container">
     <Toast />
     
-    <!-- 统计卡片区域 -->
-    <section class="stats-section">
-      <div class="stats-grid">
-        <div class="stat-card stat-total">
-          <div class="stat-icon">
-            <i class="pi pi-server"></i>
-          </div>
-          <div class="stat-content">
-            <div class="stat-value">{{ stats.total }}</div>
-            <div class="stat-label">{{ t('home.totalTerminals') }}</div>
-          </div>
-          <div class="stat-trend">
-            <span class="trend-indicator positive">+0%</span>
-          </div>
-        </div>
-
-        <div class="stat-card stat-active">
-          <div class="stat-icon">
-            <i class="pi pi-play-circle"></i>
-          </div>
-          <div class="stat-content">
-            <div class="stat-value">{{ stats.active }}</div>
-            <div class="stat-label">{{ t('home.activeTerminals') }}</div>
-          </div>
-          <div class="stat-trend">
-            <span class="trend-indicator positive">+{{ stats.active }}</span>
-          </div>
-        </div>
-
-        <div class="stat-card stat-inactive">
-          <div class="stat-icon">
-            <i class="pi pi-pause-circle"></i>
-          </div>
-          <div class="stat-content">
-            <div class="stat-value">{{ stats.inactive }}</div>
-            <div class="stat-label">{{ t('home.inactiveTerminals') }}</div>
-          </div>
-          <div class="stat-trend">
-            <span class="trend-indicator neutral">{{ stats.inactive }}</span>
-          </div>
-        </div>
-
-        <div class="stat-card stat-terminated">
-          <div class="stat-icon">
-            <i class="pi pi-stop-circle"></i>
-          </div>
-          <div class="stat-content">
-            <div class="stat-value">{{ stats.terminated }}</div>
-            <div class="stat-label">{{ t('home.terminatedTerminals') }}</div>
-          </div>
-          <div class="stat-trend">
-            <span class="trend-indicator negative">{{ stats.terminated }}</span>
-          </div>
-        </div>
-      </div>
-    </section>
-
     <!-- 加载状态 -->
     <div v-if="isLoading" class="loading-container">
       <div class="loading-content">
@@ -268,91 +429,99 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <!-- 终端列表 -->
+    <!-- 终端列表 - 使用虚拟列表 -->
     <section v-else-if="terminals.length > 0" class="terminals-section">
-      <div class="section-header">
-        <h2 class="section-title">{{ t('home.terminalList') }}</h2>
-        <div class="section-actions">
-          <span class="terminal-count">{{ terminals.length }} {{ t('home.terminals') }}</span>
-        </div>
-      </div>
-      
-      <div class="terminals-grid">
-        <div 
-          v-for="(terminal, index) in terminals" 
-          :key="terminal.id" 
-          class="terminal-card"
-          :style="{ animationDelay: `${index * 100}ms` }"
-        >
-          <div class="terminal-header">
-            <div class="terminal-id">
-              <span class="id-label">ID:</span>
-              <span class="id-value">{{ terminal.id.substring(0, 8) }}</span>
-            </div>
-            <div class="terminal-status">
-              <Badge 
-                :severity="getStatusSeverity(terminal.status)" 
-                :value="terminal.status"
-                class="status-badge"
-              />
-            </div>
-          </div>
-
-          <div class="terminal-body">
-            <div class="terminal-info">
-              <div class="info-row">
-                <span class="info-label">
+      <VirtualScroller
+        :items="terminals"
+        :itemSize="200"
+        class="terminal-virtual-list"
+        :showLoader="true"
+        :delay="200"
+      >
+        <template #item="{ item: terminal, index }">
+          <div
+            :key="terminal.id"
+            class="terminal-row"
+            :style="{ animationDelay: `${index * 50}ms` }"
+          >
+            <!-- 左侧终端信息 -->
+            <div class="terminal-info-panel">
+              <div class="terminal-header-compact">
+                <div class="terminal-id-compact">
+                  <span class="id-label">{{ t('home.id') }}:</span>
+                  <span class="id-value">{{ terminal.id }}</span>
+                </div>
+                <Badge
+                  :severity="getStatusSeverity(terminal.status)"
+                  :value="terminal.status"
+                  class="status-badge-compact"
+                />
+              </div>
+              
+              <div class="terminal-details">
+                <div class="detail-item">
                   <i class="pi pi-cog"></i>
-                  {{ t('home.pid') }}
-                </span>
-                <span class="info-value">{{ terminal.pid }}</span>
-              </div>
-              <div class="info-row">
-                <span class="info-label">
-                  <i class="pi pi-terminal"></i>
-                  {{ t('home.shell') }}
-                </span>
-                <span class="info-value">{{ terminal.shell || t('home.default') }}</span>
-              </div>
-              <div class="info-row">
-                <span class="info-label">
+                  <span class="detail-label">{{ t('home.pid') }}:</span>
+                  <span class="detail-value">{{ terminal.pid }}</span>
+                </div>
+                <div class="detail-item">
+                  <i class="pi pi-cog"></i>
+                  <span class="detail-label">{{ t('home.shell') }}:</span>
+                  <span class="detail-value">{{ terminal.shell || t('home.default') }}</span>
+                </div>
+                <div class="detail-item">
                   <i class="pi pi-folder"></i>
-                  {{ t('home.directory') }}
-                </span>
-                <span class="info-value truncate" :title="terminal.cwd">
-                  {{ terminal.cwd || t('home.defaultDirectory') }}
-                </span>
-              </div>
-              <div class="info-row">
-                <span class="info-label">
+                  <span class="detail-label">{{ t('home.directory') }}:</span>
+                  <span class="detail-value truncate" :title="terminal.cwd">
+                    {{ terminal.cwd || t('home.default') }}
+                  </span>
+                </div>
+                <div class="detail-item">
                   <i class="pi pi-clock"></i>
-                  {{ t('home.created') }}
-                </span>
-                <span class="info-value">{{ formatDate(terminal.created) }}</span>
+                  <span class="detail-label">{{ t('home.created') }}:</span>
+                  <span class="detail-value">{{ formatDate(terminal.created) }}</span>
+                </div>
+              </div>
+              
+              <div class="terminal-controls-compact">
+                <Button
+                  icon="pi pi-trash"
+                  v-tooltip="t('terminal.clear')"
+                  severity="secondary"
+                  size="small"
+                  class="control-btn-compact"
+                  @click="clearTerminal(terminal.id)"
+                />
+                <Button
+                  icon="pi pi-refresh"
+                  v-tooltip="t('terminal.reconnect')"
+                  severity="secondary"
+                  size="small"
+                  class="control-btn-compact"
+                  @click="reconnectTerminal(terminal.id)"
+                />
+                <Button
+                  icon="pi pi-times"
+                  v-tooltip="t('home.terminate')"
+                  severity="danger"
+                  size="small"
+                  class="control-btn-compact terminate-btn"
+                  @click="deleteTerminal(terminal.id)"
+                />
               </div>
             </div>
+            
+            <!-- 右侧终端内容 -->
+            <div class="terminal-content-panel">
+              <div
+                :id="`terminal-${terminal.id}`"
+                class="terminal-output-compact"
+                @click="activateTerminal(terminal.id)"
+              ></div>
+            </div>
           </div>
-
-          <div class="terminal-footer">
-            <Button 
-              icon="pi pi-external-link" 
-              :label="t('home.open')" 
-              severity="primary" 
-              size="small"
-              class="action-btn action-primary"
-              @click="openTerminal(terminal.id)"
-            />
-            <Button
-              icon="pi pi-trash"
-              :label="t('home.terminate')"
-              severity="danger"
-              size="small"
-              class="action-btn action-danger"
-              @click="deleteTerminal(terminal.id)"
-            />
-          </div>
-        </div>
-      </div>
+        </template>
+      </VirtualScroller>
     </section>
 
     <!-- 空状态 -->
@@ -365,68 +534,69 @@ onUnmounted(() => {
         <p class="empty-description">
           {{ t('home.createFirstTerminal') }}
         </p>
-        <Button 
-          icon="pi pi-plus" 
-          :label="t('home.createNewTerminal')" 
-          severity="primary" 
-          class="modern-btn-primary"
-          @click="showCreateModal = true"
-        />
+        <!-- 移除创建新终端按钮 -->
       </div>
     </section>
 
-    <!-- 创建终端模态框 -->
-    <Dialog
-      v-model:visible="showCreateModal"
-      :header="t('home.createNewTerminal')"
-      :style="{ width: '500px' }"
-      :modal="true"
-      :closeButtonProps="{ 'aria-label': t('common.close') }"
-      class="create-modal"
+    <!-- 创建终端模态框 - 使用原生HTML模态框 -->
+    <div
+      v-if="showCreateModal"
+      class="native-modal-overlay"
+      @click.self="handleCancelModal"
     >
-      <div class="modal-content">
-        <div class="form-group">
-          <label for="shell" class="form-label">
-            <i class="pi pi-terminal"></i>
-            {{ t('home.shellType') }}
-          </label>
-          <InputText 
-            id="shell"
-            v-model="newTerminalShell" 
-            :placeholder="t('home.shellPlaceholder')"
-            class="form-input"
-          />
+      <div class="native-modal">
+        <div class="native-modal-header">
+          <h3 class="native-modal-title">{{ t('home.createNewTerminal') }}</h3>
+          <button
+            class="native-modal-close"
+            @click="handleCancelModal"
+            :aria-label="t('common.close')"
+          >
+            <i class="pi pi-times"></i>
+          </button>
         </div>
-        <div class="form-group">
-          <label for="cwd" class="form-label">
-            <i class="pi pi-folder"></i>
-            {{ t('home.workingDirectory') }}
-          </label>
-          <InputText 
-            id="cwd"
-            v-model="newTerminalCwd" 
-            :placeholder="t('home.directoryPlaceholder')"
-            class="form-input"
-          />
+        <div class="native-modal-content">
+          <div class="form-group">
+            <label for="shell" class="form-label">
+              <i class="pi pi-terminal"></i>
+              {{ t('home.shellType') }}
+            </label>
+            <InputText
+              id="shell"
+              v-model="newTerminalShell"
+              :placeholder="t('home.shellPlaceholder')"
+              class="form-input"
+            />
+          </div>
+          <div class="form-group">
+            <label for="cwd" class="form-label">
+              <i class="pi pi-folder"></i>
+              {{ t('home.workingDirectory') }}
+            </label>
+            <InputText
+              id="cwd"
+              v-model="newTerminalCwd"
+              :placeholder="t('home.directoryPlaceholder')"
+              class="form-input"
+            />
+          </div>
         </div>
-      </div>
-      <template #footer>
-        <div class="modal-footer">
-          <Button 
-            :label="t('common.cancel')" 
-            severity="secondary" 
+        <div class="native-modal-footer">
+          <Button
+            :label="t('common.cancel')"
+            severity="secondary"
             class="modal-btn-secondary"
-            @click="showCreateModal = false"
+            @click="handleCancelModal"
           />
-          <Button 
-            :label="t('home.create')" 
-            severity="primary" 
+          <Button
+            :label="t('home.create')"
+            severity="primary"
             class="modal-btn-primary"
             @click="createTerminal"
           />
         </div>
-      </template>
-    </Dialog>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -437,184 +607,6 @@ onUnmounted(() => {
   margin: 0 auto;
   padding: var(--spacing-lg);
   animation: fadeIn var(--transition-slow) ease-out;
-}
-
-/* 英雄区域 */
-.hero-section {
-  margin-bottom: var(--spacing-xl);
-  background: var(--gradient-primary);
-  border-radius: var(--radius-2xl);
-  padding: var(--spacing-xl);
-  color: var(--text-inverse);
-  position: relative;
-  overflow: hidden;
-}
-
-.hero-section::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 300px;
-  height: 300px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 50%;
-  transform: translate(50%, -50%);
-}
-
-.hero-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: var(--spacing-xl);
-  position: relative;
-  z-index: 1;
-}
-
-.hero-text {
-  flex: 1;
-}
-
-.hero-title {
-  font-size: var(--text-4xl);
-  font-weight: 700;
-  margin: 0 0 var(--spacing) 0;
-  display: flex;
-  align-items: center;
-  gap: var(--spacing);
-}
-
-.hero-icon {
-  font-size: var(--text-4xl);
-  animation: float 3s ease-in-out infinite;
-}
-
-.hero-description {
-  font-size: var(--text-lg);
-  opacity: 0.9;
-  margin: 0;
-  line-height: var(--leading-relaxed);
-}
-
-.hero-actions {
-  display: flex;
-  gap: var(--spacing);
-  flex-shrink: 0;
-}
-
-/* 统计区域 */
-.stats-section {
-  margin-bottom: var(--spacing-xl);
-}
-
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: var(--spacing-lg);
-}
-
-.stat-card {
-  background: var(--bg-primary);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-xl);
-  padding: var(--spacing-lg);
-  display: flex;
-  align-items: center;
-  gap: var(--spacing);
-  transition: all var(--transition-normal);
-  position: relative;
-  overflow: hidden;
-}
-
-.stat-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 4px;
-  height: 100%;
-  background: var(--gradient-primary);
-  transition: width var(--transition-fast);
-}
-
-.stat-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-lg);
-}
-
-.stat-card:hover::before {
-  width: 8px;
-}
-
-.stat-icon {
-  width: 60px;
-  height: 60px;
-  border-radius: var(--radius-lg);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: var(--text-2xl);
-  color: white;
-}
-
-.stat-total .stat-icon {
-  background: var(--gradient-primary);
-}
-
-.stat-active .stat-icon {
-  background: var(--gradient-secondary);
-}
-
-.stat-inactive .stat-icon {
-  background: linear-gradient(135deg, var(--warning-500) 0%, var(--warning-600) 100%);
-}
-
-.stat-terminated .stat-icon {
-  background: linear-gradient(135deg, var(--danger-500) 0%, var(--danger-600) 100%);
-}
-
-.stat-content {
-  flex: 1;
-}
-
-.stat-value {
-  font-size: var(--text-3xl);
-  font-weight: 700;
-  color: var(--text-primary);
-  line-height: 1;
-  margin-bottom: var(--spacing-xs);
-}
-
-.stat-label {
-  font-size: var(--text-sm);
-  color: var(--text-secondary);
-  font-weight: 500;
-}
-
-.stat-trend {
-  text-align: right;
-}
-
-.trend-indicator {
-  font-size: var(--text-xs);
-  font-weight: 600;
-  padding: var(--spacing-xs) var(--spacing-sm);
-  border-radius: var(--radius-full);
-}
-
-.trend-indicator.positive {
-  background: var(--success-100);
-  color: var(--success-700);
-}
-
-.trend-indicator.negative {
-  background: var(--danger-100);
-  color: var(--danger-700);
-}
-
-.trend-indicator.neutral {
-  background: var(--gray-100);
-  color: var(--gray-700);
 }
 
 /* 加载状态 */
@@ -640,168 +632,208 @@ onUnmounted(() => {
   font-size: var(--text-lg);
 }
 
-/* 终端列表区域 */
+/* 终端列表区域 - 虚拟列表 */
 .terminals-section {
   margin-bottom: var(--spacing-xl);
+  height: calc(100vh - 200px);
 }
 
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: var(--spacing-lg);
-}
-
-.section-title {
-  font-size: var(--text-2xl);
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 0;
-}
-
-.section-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing);
-}
-
-.terminal-count {
-  font-size: var(--text-sm);
-  color: var(--text-secondary);
-  background: var(--bg-secondary);
-  padding: var(--spacing-xs) var(--spacing-sm);
-  border-radius: var(--radius-full);
-}
-
-.terminals-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
-  gap: var(--spacing-lg);
-}
-
-.terminal-card {
-  background: var(--bg-primary);
+.terminal-virtual-list {
+  height: 100%;
   border: 1px solid var(--border-light);
-  border-radius: var(--radius-xl);
-  overflow: hidden;
-  transition: all var(--transition-normal);
-  animation: slideUp var(--transition-normal) ease-out;
+  border-radius: var(--radius-lg);
+  background: var(--bg-primary);
+}
+
+.terminal-row {
+  display: flex;
+  height: 200px;
+  border-bottom: 1px solid var(--border-light);
+  background: var(--bg-primary);
+  transition: all var(--transition-fast);
+  animation: slideIn var(--transition-normal) ease-out;
   animation-fill-mode: both;
 }
 
-.terminal-card:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-xl);
-  border-color: var(--primary-200);
-}
-
-.terminal-header {
-  padding: var(--spacing-lg);
+.terminal-row:hover {
   background: var(--bg-secondary);
-  border-bottom: 1px solid var(--border-light);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
 }
 
-.terminal-id {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-}
-
-.id-label {
-  font-size: var(--text-xs);
-  color: var(--text-tertiary);
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.id-value {
-  font-family: var(--font-mono);
-  font-size: var(--text-sm);
-  font-weight: 600;
-  color: var(--text-primary);
-  background: var(--bg-primary);
-  padding: var(--spacing-xs) var(--spacing-sm);
-  border-radius: var(--radius);
-}
-
-.status-badge {
-  font-size: var(--text-xs);
-  font-weight: 600;
-}
-
-.terminal-body {
-  padding: var(--spacing-lg);
-}
-
-.terminal-info {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-sm);
-}
-
-.info-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: var(--spacing-sm) 0;
-  border-bottom: 1px solid var(--border-light);
-}
-
-.info-row:last-child {
+.terminal-row:last-child {
   border-bottom: none;
 }
 
-.info-label {
+/* 左侧信息面板 */
+.terminal-info-panel {
+  width: 300px;
+  background: #1a1a1a;
+  border-right: 1px solid var(--border-light);
+  padding: var(--spacing-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  flex-shrink: 0;
+}
+
+.terminal-header-compact {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-sm);
+}
+
+.terminal-id-compact {
   display: flex;
   align-items: center;
-  gap: var(--spacing-sm);
-  font-size: var(--text-sm);
-  color: var(--text-secondary);
+  gap: var(--spacing-xs);
+}
+
+.terminal-id-compact .id-label {
+  font-size: var(--text-xs);
+  color: #888;
   font-weight: 500;
+  text-transform: uppercase;
 }
 
-.info-label i {
-  font-size: var(--text-sm);
-  color: var(--primary-500);
+.terminal-id-compact .id-value {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: #fff;
+  background: #333;
+  padding: 2px 6px;
+  border-radius: 3px;
 }
 
-.info-value {
-  font-size: var(--text-sm);
-  color: var(--text-primary);
+.status-badge-compact {
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+
+.terminal-details {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  flex: 1;
+}
+
+.detail-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  font-size: var(--text-xs);
+  color: #ccc;
+}
+
+.detail-item i {
+  font-size: var(--text-xs);
+  color: #666;
+  width: 12px;
+}
+
+.detail-label {
+  color: #888;
   font-weight: 500;
-  max-width: 200px;
+  min-width: 40px;
 }
 
-.info-value.truncate {
+.detail-value {
+  color: #fff;
+  font-weight: 400;
+  flex: 1;
+}
+
+.detail-value.truncate {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.terminal-footer {
-  padding: var(--spacing-lg);
-  background: var(--bg-secondary);
-  border-top: 1px solid var(--border-light);
+.terminal-controls-compact {
   display: flex;
-  gap: var(--spacing);
+  gap: var(--spacing-xs);
+  margin-top: var(--spacing-sm);
 }
 
-.action-btn {
-  flex: 1;
-  font-weight: 500;
+.control-btn-compact {
+  background: #333 !important;
+  border: 1px solid #555 !important;
+  color: #ccc !important;
+  width: 28px !important;
+  height: 28px !important;
+  font-size: var(--text-xs) !important;
   transition: all var(--transition-fast);
 }
 
-.action-primary:hover {
-  transform: translateY(-1px);
+.control-btn-compact:hover {
+  background: #444 !important;
+  color: #fff !important;
 }
 
-.action-danger:hover {
-  transform: translateY(-1px);
+.control-btn-compact.terminate-btn {
+  background: #dc3545 !important;
+  border-color: #dc3545 !important;
+  color: #fff !important;
+}
+
+.control-btn-compact.terminate-btn:hover {
+  background: #c82333 !important;
+}
+
+/* 右侧终端内容面板 */
+.terminal-content-panel {
+  flex: 1;
+  background: #000000;
+  position: relative;
+  overflow: hidden;
+}
+
+.terminal-output-compact {
+  width: 100%;
+  height: 100%;
+  cursor: text;
+  font-size: 11px;
+}
+
+/* xterm.js样式覆盖 */
+:deep(.xterm) {
+  height: 100% !important;
+  background: #000000 !important;
+  border-radius: 0 !important;
+}
+
+:deep(.xterm-viewport) {
+  background: #000000 !important;
+}
+
+:deep(.xterm-screen) {
+  background: #000000 !important;
+}
+
+/* 隐藏xterm.js的辅助元素 */
+:deep(.xterm-helper-textarea) {
+  position: absolute !important;
+  left: -9999px !important;
+  top: -9999px !important;
+  width: 0 !important;
+  height: 0 !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+:deep(.xterm-char-measure-element) {
+  position: absolute !important;
+  left: -99999px !important;
+  top: -99999px !important;
+  width: 0 !important;
+  height: 0 !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+  display: none !important;
+  font-size: 0 !important;
+  line-height: 0 !important;
+  z-index: -9999 !important;
 }
 
 /* 空状态 */
@@ -839,7 +871,74 @@ onUnmounted(() => {
   line-height: var(--leading-relaxed);
 }
 
-/* 模态框样式 */
+/* 原生模态框样式 */
+.native-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+.native-modal {
+  background: white;
+  border-radius: var(--radius-xl);
+  width: 500px;
+  max-width: 90%;
+  max-height: 90%;
+  overflow: hidden;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+}
+
+.native-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-lg);
+  border-bottom: 1px solid var(--border-light);
+}
+
+.native-modal-title {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.native-modal-close {
+  background: none;
+  border: none;
+  font-size: var(--text-lg);
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: var(--spacing-xs);
+  border-radius: var(--radius);
+  transition: all var(--transition-fast);
+}
+
+.native-modal-close:hover {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.native-modal-content {
+  padding: var(--spacing-lg);
+}
+
+.native-modal-footer {
+  display: flex;
+  gap: var(--spacing);
+  justify-content: flex-end;
+  padding: var(--spacing-lg);
+  border-top: 1px solid var(--border-light);
+}
+
+/* 保留原有的模态框样式以备后用 */
 .create-modal {
   border-radius: var(--radius-xl);
   overflow: hidden;
@@ -913,126 +1012,39 @@ onUnmounted(() => {
   }
 }
 
-@keyframes slideUp {
+@keyframes slideIn {
   from {
     opacity: 0;
-    transform: translateY(30px);
+    transform: translateX(-20px);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes float {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-10px);
+    transform: translateX(0);
   }
 }
 
 /* 响应式设计 */
-@media (max-width: 1024px) {
-  .terminals-grid {
-    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-  }
-}
-
 @media (max-width: 768px) {
   .dashboard-container {
     padding: var(--spacing);
   }
 
-  .hero-content {
-    flex-direction: column;
-    text-align: center;
-    gap: var(--spacing-lg);
+  .terminal-info-panel {
+    width: 250px;
   }
 
-  .hero-title {
-    font-size: var(--text-3xl);
-    justify-content: center;
+  .detail-item {
+    font-size: 10px;
   }
 
-  .hero-actions {
-    justify-content: center;
-  }
-
-  .stats-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .terminals-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .section-header {
-    flex-direction: column;
-    gap: var(--spacing);
-    text-align: center;
-  }
-
-  .terminal-footer {
-    flex-direction: column;
-  }
-
-  .action-btn {
-    width: 100%;
-  }
-}
-
-@media (max-width: 480px) {
-  .hero-section {
-    padding: var(--spacing-lg);
-  }
-
-  .hero-title {
-    font-size: var(--text-2xl);
-  }
-
-  .hero-description {
-    font-size: var(--text-base);
-  }
-
-  .stat-card {
-    padding: var(--spacing);
-  }
-
-  .stat-icon {
-    width: 50px;
-    height: 50px;
-    font-size: var(--text-xl);
-  }
-
-  .stat-value {
-    font-size: var(--text-2xl);
+  .control-btn-compact {
+    width: 24px !important;
+    height: 24px !important;
   }
 }
 
 /* 暗色模式支持 */
 @media (prefers-color-scheme: dark) {
-  .hero-section {
-    background: var(--gradient-dark);
-  }
-
-  .stat-card {
-    background: var(--bg-dark-secondary);
-    border-color: var(--border-light);
-  }
-
-  .terminal-card {
-    background: var(--bg-dark-secondary);
-    border-color: var(--border-light);
-  }
-
-  .terminal-header,
-  .terminal-footer {
-    background: var(--bg-dark-tertiary);
-    border-color: var(--border-light);
-  }
-
   .empty-state {
     background: var(--bg-dark-secondary);
     border-color: var(--border-medium);
@@ -1042,16 +1054,14 @@ onUnmounted(() => {
 /* 减少动画偏好支持 */
 @media (prefers-reduced-motion: reduce) {
   .dashboard-container,
-  .terminal-card,
-  .hero-icon {
+  .terminal-row {
     animation: none;
+    transition: none;
   }
 
-  .stat-card,
-  .terminal-card,
   .modern-btn-primary,
   .modern-btn-secondary,
-  .action-btn {
+  .control-btn-compact {
     transition: none;
   }
 }

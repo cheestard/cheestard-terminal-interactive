@@ -415,10 +415,17 @@ Fix tool: OpenAI Codex
     if (!this.isToolDisabled('interact_with_terminal')) {
       this.server.tool(
         'interact_with_terminal',
-        `与指定ID的终端进行交互操作。如果终端不存在，将自动创建新终端。`,
+        `与指定ID的终端进行交互操作。如果终端不存在，将自动创建新终端。也可以列出所有活跃的终端会话。`,
       {
+        // 列出终端参数
+        listTerminals: z.boolean().optional().describe('List all active terminal sessions. When true, ignores other parameters and returns list of all terminals.'),
+        
+        // 终止终端参数
+        killTerminal: z.boolean().optional().describe('Terminate the specified terminal session. When true, ignores other parameters except terminalId and kills the terminal.'),
+        signal: z.string().optional().describe('Signal to send for termination (default: SIGTERM, only used when killTerminal is true)'),
+        
         // 终端创建参数
-        terminalId: z.string().describe('Terminal ID for identification. If terminal does not exist, it will be created automatically.'),
+        terminalId: z.string().optional().describe('Terminal ID for identification. If terminal does not exist, it will be created automatically.'),
         shell: z.string().optional().describe('Shell to use (default: system default, only used when creating new terminal)'),
         cwd: z.string().optional().describe('Working directory (default: current directory, only used when creating new terminal)'),
         env: z.record(z.string()).optional().describe('Environment variables (only used when creating new terminal)'),
@@ -444,18 +451,98 @@ Fix tool: OpenAI Codex
         readOnlyHint: false
       },
       async ({
-        terminalId, shell, cwd, env,
+        listTerminals, killTerminal, signal, terminalId, shell, cwd, env,
         input, appendNewline, waitForOutput,
         since, maxLines, mode, headLines, tailLines, stripSpinner,
         specialOperation
       }): Promise<CallToolResult> => {
         try {
+          // 如果请求列出所有终端，则执行list操作并返回
+          if (listTerminals) {
+            const result = await this.terminalManager.listTerminals();
+            
+            if (result.terminals.length === 0) {
+              return {
+                content: [
+                  {
+                    type: 'text',
+                    text: 'No active terminal sessions found.'
+                  }
+                ],
+                structuredContent: {
+                  listTerminals: true,
+                  count: 0,
+                  terminals: []
+                }
+              };
+            }
+
+            const terminalList = result.terminals.map(terminal =>
+              `ID: ${terminal.id}\n` +
+              `PID: ${terminal.pid}\n` +
+              `Shell: ${terminal.shell}\n` +
+              `Working Directory: ${terminal.cwd}\n` +
+              `Created: ${terminal.created}\n` +
+              `Last Activity: ${terminal.lastActivity}\n` +
+              `Status: ${terminal.status}\n`
+            ).join('\n---\n');
+
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: `Active Terminal Sessions (${result.terminals.length}):\n\n${terminalList}`
+                }
+              ],
+              structuredContent: {
+                listTerminals: true,
+                count: result.terminals.length,
+                terminals: result.terminals
+              }
+            };
+          }
+
+          // 如果请求终止终端，则执行kill操作并返回
+          if (killTerminal) {
+            if (!terminalId) {
+              throw new Error('terminalId is required when killing terminal.');
+            }
+
+            try {
+              await this.terminalManager.killTerminal(terminalId, signal);
+
+              return {
+                content: [
+                  {
+                    type: 'text',
+                    text: `Terminal ${terminalId} terminated successfully${signal ? ` with signal ${signal}` : ''}.`
+                  }
+                ],
+                structuredContent: {
+                  killTerminal: true,
+                  terminalId,
+                  signal: signal || 'SIGTERM'
+                }
+              };
+            } catch (error) {
+              return {
+                content: [
+                  {
+                    type: 'text',
+                    text: `Error terminating terminal: ${error instanceof Error ? error.message : String(error)}`
+                  }
+                ],
+                isError: true
+              };
+            }
+          }
+
           let actualTerminalId = terminalId;
           let terminalCreated = false;
           
           // 检查是否提供了终端ID
           if (!actualTerminalId) {
-            throw new Error('terminalId is required.');
+            throw new Error('terminalId is required when not listing or killing terminals.');
           }
           
           // 检查终端是否存在，如果不存在则创建

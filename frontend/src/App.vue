@@ -1,18 +1,31 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import LanguageSwitcher from './components/LanguageSwitcher.vue'
+import { ref, onMounted, computed } from 'vue'
 import Button from 'primevue/button'
+import { useRouter } from 'vue-router'
 import { useTerminalStore } from './stores/terminal'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
+const router = useRouter()
 
 const isLoaded = ref(false)
 const terminalStore = useTerminalStore()
 
-const refreshTerminals = () => {
-  terminalStore.refreshTerminals()
-}
+// 统计数据 - 从store获取或直接计算
+const stats = computed(() => terminalStore.stats || {
+  total: 0,
+  active: 0,
+  inactive: 0,
+  terminated: 0
+})
 
 const createNewTerminal = () => {
   terminalStore.createNewTerminal()
+}
+
+// 导航到设置页面
+const navigateToSettings = () => {
+  router.push('/settings')
 }
 
 onMounted(() => {
@@ -48,22 +61,39 @@ onMounted(() => {
             <h1 class="logo-text">Cheestard Terminal Interactive</h1>
           </div>
           
+          <div class="header-stats">
+            <!-- 统计文字图标 - 不换行 -->
+            <div class="stats-text">
+              <span class="stat-text-item">
+                <i class="pi pi-server"></i>
+                {{ stats.total }} {{ t('app.totalTerminals') }}
+              </span>
+              <span class="stat-text-item">
+                <i class="pi pi-play-circle"></i>
+                {{ stats.active }} {{ t('app.active') }}
+              </span>
+              <span class="stat-text-item">
+                <i class="pi pi-pause-circle"></i>
+                {{ stats.inactive }} {{ t('app.inactive') }}
+              </span>
+              <span class="stat-text-item">
+                <i class="pi pi-stop-circle"></i>
+                {{ stats.terminated }} {{ t('app.terminated') }}
+              </span>
+            </div>
+          </div>
+          
           <div class="header-actions">
+            <!-- 设置按钮 -->
             <Button
-              icon="pi pi-refresh"
-              label="刷新"
+              icon="pi pi-cog"
+              v-tooltip="t('settings.title')"
               severity="secondary"
-              class="modern-btn-secondary"
-              @click="refreshTerminals"
+              text
+              rounded
+              class="settings-btn"
+              @click="navigateToSettings"
             />
-            <Button
-              icon="pi pi-plus"
-              label="创建新终端"
-              severity="primary"
-              class="modern-btn-primary"
-              @click="createNewTerminal"
-            />
-            <LanguageSwitcher />
           </div>
         </div>
       </header>
@@ -222,10 +252,65 @@ onMounted(() => {
   margin: 0;
 }
 
+.header-stats {
+  display: flex;
+  align-items: center;
+  margin-right: var(--spacing-lg);
+}
+
+.stats-text {
+  display: flex;
+  gap: var(--spacing-md);
+  align-items: center;
+  white-space: nowrap;
+}
+
+.stat-text-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.stat-text-item i {
+  font-size: var(--text-sm);
+}
+
+.stat-text-item:nth-child(1) i {
+  color: var(--primary-500);
+}
+
+.stat-text-item:nth-child(2) i {
+  color: var(--success-500);
+}
+
+.stat-text-item:nth-child(3) i {
+  color: var(--warning-500);
+}
+
+.stat-text-item:nth-child(4) i {
+  color: var(--danger-500);
+}
+
 .header-actions {
   display: flex;
   align-items: center;
   gap: var(--spacing);
+}
+
+.settings-btn {
+  width: 40px !important;
+  height: 40px !important;
+  font-size: var(--text-lg) !important;
+  transition: all var(--transition-fast);
+}
+
+.settings-btn:hover {
+  background-color: var(--primary-50) !important;
+  color: var(--primary-500) !important;
+  transform: rotate(90deg);
 }
 
 /* 主内容区域 */

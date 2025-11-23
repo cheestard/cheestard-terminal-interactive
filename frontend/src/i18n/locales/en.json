@@ -35,6 +35,7 @@
     "noTerminalsDesc": "Create your first terminal session to start using the terminal manager",
     "createFirstTerminal": "Create First Terminal",
     "terminalInfo": "Terminal Info",
+    "id": "ID",
     "pid": "PID",
     "shell": "Shell",
     "directory": "Directory",
@@ -105,5 +106,20 @@
     "terminateTerminalError": "Unable to terminate terminal.",
     "copyError": "Copy failed",
     "fetchTerminalDetailsError": "Unable to fetch terminal details."
+  },
+  "app": {
+    "totalTerminals": "Total Terminals",
+    "active": "Active",
+    "inactive": "Inactive",
+    "terminated": "Terminated"
+  },
+  "settings": {
+    "title": "Settings",
+    "language": "Language",
+    "languageDescription": "Select your preferred interface language",
+    "chinese": "简体中文",
+    "english": "English",
+    "saveSuccess": "Settings saved",
+    "backToHome": "Back to Home"
   }
 }

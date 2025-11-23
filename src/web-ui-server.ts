@@ -3,6 +3,8 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { createServer, Server as HttpServer } from 'http';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import fs from 'fs/promises';
+import yaml from 'js-yaml';
 import { TerminalManager } from './terminal-manager.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -249,6 +251,115 @@ export class WebUIServer {
       } catch (error) {
         res.status(400).json({
           error: 'Failed to get terminal stats',
+          message: error instanceof Error ? error.message : String(error)
+        });
+      }
+    });
+
+    // 设置相关API
+    this.setupSettingsRoutes();
+  }
+
+  /**
+   * 设置设置相关的API路由
+   */
+  private setupSettingsRoutes(): void {
+    const configPath = path.resolve(process.cwd(), 'config.yaml');
+
+    // 获取设置
+    // 获取设置
+    this.app.get('/api/settings', async (req: Request, res: Response): Promise<void> => {
+      try {
+        // 检查配置文件是否存在
+        try {
+          await fs.access(configPath);
+        } catch {
+          // 文件不存在，返回默认设置
+          res.json({
+            language: 'zh'
+          });
+          return;
+        }
+
+        // 读取配置文件
+        const configContent = await fs.readFile(configPath, 'utf8');
+        const config = yaml.load(configContent) as any;
+        
+        res.json({
+          language: config.language || 'zh'
+        });
+      } catch (error) {
+        console.error('Failed to read settings:', error);
+        res.status(500).json({
+          error: 'Failed to read settings',
+          message: error instanceof Error ? error.message : String(error)
+        });
+      }
+    });
+    // 保存设置
+    this.app.post('/api/settings', async (req: Request, res: Response): Promise<void> => {
+      try {
+        const { language } = req.body;
+
+        if (!language || (language !== 'zh' && language !== 'en')) {
+          res.status(400).json({
+            error: 'Invalid language setting'
+          });
+          return;
+        }
+
+        // 读取现有配置
+        let config: any = {};
+        try {
+          const configContent = await fs.readFile(configPath, 'utf8');
+          config = yaml.load(configContent) as any || {};
+        } catch {
+          // 文件不存在或读取失败，使用空配置
+        }
+
+        // 更新语言设置
+        config.language = language;
+
+        // 写入配置文件
+        const yamlContent = yaml.dump(config, {
+          indent: 2,
+          lineWidth: 120
+        });
+        
+        await fs.writeFile(configPath, yamlContent, 'utf8');
+
+        res.json({
+          success: true,
+          message: 'Settings saved successfully',
+          language
+        });
+      } catch (error) {
+        console.error('Failed to save settings:', error);
+        res.status(500).json({
+          error: 'Failed to save settings',
+          message: error instanceof Error ? error.message : String(error)
+        });
+      }
+    });
+
+    // 重置设置
+    this.app.delete('/api/settings', async (req: Request, res: Response): Promise<void> => {
+      try {
+        // 删除配置文件
+        try {
+          await fs.unlink(configPath);
+        } catch {
+          // 文件不存在，忽略错误
+        }
+
+        res.json({
+          success: true,
+          message: 'Settings reset successfully'
+        });
+      } catch (error) {
+        console.error('Failed to reset settings:', error);
+        res.status(500).json({
+          error: 'Failed to reset settings',
           message: error instanceof Error ? error.message : String(error)
         });
       }

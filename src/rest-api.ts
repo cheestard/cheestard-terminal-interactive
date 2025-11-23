@@ -1,5 +1,8 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
+import fs from 'fs';
+import path from 'path';
+import yaml from 'js-yaml';
 import { TerminalManager } from './terminal-manager.js';
 import {
   CreateTerminalInput,
@@ -28,11 +31,12 @@ export class RestApiServer {
    * 设置中间件
    */
   private setupMiddleware(): void {
-    // CORS 支持
+    // CORS 支持 - 明确指定前端端口以支持凭据
     this.app.use(cors({
-      origin: '*',
+      origin: ['http://localhost:1107', 'http://127.0.0.1:1107'],
       methods: ['GET', 'POST', 'PUT', 'DELETE'],
-      allowedHeaders: ['Content-Type', 'Authorization']
+      allowedHeaders: ['Content-Type', 'Authorization'],
+      credentials: true
     }));
 
     // JSON 解析
@@ -299,6 +303,133 @@ export class RestApiServer {
       }
     });
 
+    // 设置相关API - 获取配置
+    this.app.get('/api/settings', (req: Request, res: Response): void => {
+      try {
+        const configPath = path.join(process.cwd(), 'config.yaml');
+        
+        if (!fs.existsSync(configPath)) {
+          // 如果配置文件不存在，返回默认配置
+          const defaultConfig = {
+            app: {
+              name: 'Cheestard Terminal Interactive',
+              language: 'zh'
+            },
+            terminal: {
+              defaultShell: 'pwsh.exe',
+              fontSize: 14,
+              fontFamily: 'Consolas, "Courier New", monospace'
+            }
+          };
+          res.json(defaultConfig);
+          return;
+        }
+
+        const fileContent = fs.readFileSync(configPath, 'utf8');
+        const config = yaml.load(fileContent);
+        res.json(config);
+      } catch (error) {
+        console.error('Error reading config:', error);
+        res.status(500).json({
+          error: 'Failed to read configuration',
+          message: error instanceof Error ? error.message : String(error)
+        });
+      }
+    });
+
+    // 设置相关API - 保存配置
+    this.app.post('/api/settings', (req: Request, res: Response): void => {
+      try {
+        const configPath = path.join(process.cwd(), 'config.yaml');
+        const newConfig = req.body;
+
+        // 验证配置数据
+        if (!newConfig || typeof newConfig !== 'object') {
+          res.status(400).json({
+            error: 'Invalid configuration data'
+          });
+          return;
+        }
+
+        // 读取现有配置以保留其他设置
+        let existingConfig = {};
+        if (fs.existsSync(configPath)) {
+          const fileContent = fs.readFileSync(configPath, 'utf8');
+          existingConfig = yaml.load(fileContent) || {};
+        }
+
+        // 合并配置，只更新提供的字段
+        const mergedConfig = {
+          ...existingConfig,
+          ...newConfig
+        };
+
+        // 写入配置文件
+        const yamlContent = yaml.dump(mergedConfig, {
+          indent: 2,
+          lineWidth: 120,
+          noRefs: true,
+          sortKeys: false
+        });
+
+        fs.writeFileSync(configPath, yamlContent, 'utf8');
+
+        res.json({
+          success: true,
+          message: 'Configuration saved successfully',
+          config: mergedConfig
+        });
+      } catch (error) {
+        console.error('Error saving config:', error);
+        res.status(500).json({
+          error: 'Failed to save configuration',
+          message: error instanceof Error ? error.message : String(error)
+        });
+      }
+    });
+
+    // 设置相关API - 重置配置
+    this.app.post('/api/settings/reset', (req: Request, res: Response) => {
+      try {
+        const configPath = path.join(process.cwd(), 'config.yaml');
+        
+        // 默认配置
+        const defaultConfig = {
+          app: {
+            name: 'Cheestard Terminal Interactive',
+            language: 'zh'
+          },
+          terminal: {
+            defaultShell: 'pwsh.exe',
+            fontSize: 14,
+            fontFamily: 'Consolas, "Courier New", monospace'
+          }
+        };
+
+        // 写入默认配置
+        const yamlContent = yaml.dump(defaultConfig, {
+          indent: 2,
+          lineWidth: 120,
+          noRefs: true,
+          sortKeys: false
+        });
+
+        fs.writeFileSync(configPath, yamlContent, 'utf8');
+
+        res.json({
+          success: true,
+          message: 'Configuration reset to defaults successfully',
+          config: defaultConfig
+        });
+      } catch (error) {
+        console.error('Error resetting config:', error);
+        res.status(500).json({
+          error: 'Failed to reset configuration',
+          message: error instanceof Error ? error.message : String(error)
+        });
+      }
+    });
+
     // API 文档
     this.app.get('/', (req: Request, res: Response) => {
       res.json({
@@ -314,7 +445,10 @@ export class RestApiServer {
           'GET /terminals/:id/output': 'Read terminal output',
           'DELETE /terminals/:id': 'Terminate terminal session',
           'PUT /terminals/:id/resize': 'Resize terminal',
-          'GET /stats': 'Get manager statistics'
+          'GET /stats': 'Get manager statistics',
+          'GET /api/settings': 'Get application configuration',
+          'POST /api/settings': 'Save application configuration',
+          'POST /api/settings/reset': 'Reset configuration to defaults'
         },
         documentation: 'See README.md for detailed usage instructions'
       });

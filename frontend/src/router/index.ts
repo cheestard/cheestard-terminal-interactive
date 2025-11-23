@@ -13,6 +13,11 @@ const router = createRouter({
       path: '/terminal/:id',
       name: 'terminal-detail',
       component: () => import('../views/TerminalDetailView.vue')
+    },
+    {
+      path: '/settings',
+      name: 'settings',
+      component: () => import('../views/SettingsView.vue')
     }
   ]
 })

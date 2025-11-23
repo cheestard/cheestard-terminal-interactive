@@ -9,7 +9,7 @@ const messages = {
 
 const i18n = createI18n({
   legacy: false,
-  locale: 'zh', // 默认语言
+  locale: localStorage.getItem('language') || 'zh', // 默认语言，优先使用localStorage中的设置
   fallbackLocale: 'en',
   messages
 })

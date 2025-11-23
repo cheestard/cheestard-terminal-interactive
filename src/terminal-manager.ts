@@ -545,15 +545,22 @@ export class TerminalManager extends EventEmitter {
    * 列出所有终端会话
    */
   async listTerminals(): Promise<TerminalListResult> {
-    const terminals = Array.from(this.sessions.values()).map(session => ({
-      id: session.id,
-      pid: session.pid,
-      shell: session.shell,
-      cwd: session.cwd,
-      created: session.created.toISOString(),
-      lastActivity: session.lastActivity.toISOString(),
-      status: session.status
-    }));
+    const terminals = Array.from(this.sessions.values()).map(session => {
+      // 获取用户提供的终端名称，如果没有则使用内部UUID
+      // Get user-provided terminal name, fallback to internal UUID if not available
+      const terminalName = this.terminalReverseMap.get(session.id) || session.id;
+      
+      return {
+        id: terminalName, // 使用用户提供的名称而不是内部UUID
+        internalId: session.id, // 保留内部UUID供调试使用
+        pid: session.pid,
+        shell: session.shell,
+        cwd: session.cwd,
+        created: session.created.toISOString(),
+        lastActivity: session.lastActivity.toISOString(),
+        status: session.status
+      };
+    });
 
     return { terminals };
   }

@@ -1,0 +1,31 @@
+app:
+  name: Cheestard Terminal Interactive
+  language: zh
+  version: 1.0.0
+server:
+  host: 127.0.0.1
+  port: 1106
+  cors:
+    origin:
+      - http://localhost:1107
+      - http://127.0.0.1:1107
+    credentials: true
+terminal:
+  defaultShell: pwsh.exe
+  fontSize: 14
+  fontFamily: Consolas, "Courier New", monospace
+  maxBufferSize: 10000
+  sessionTimeout: 86400000
+  defaultEnv: {}
+mcp:
+  enableDnsRebindingProtection: false
+  allowedHosts:
+    - 127.0.0.1
+    - localhost
+    - localhost:1106
+logging:
+  level: info
+  enableConsole: true
+  enableFile: false
+  filePath: ./logs/app.log
+language: zh

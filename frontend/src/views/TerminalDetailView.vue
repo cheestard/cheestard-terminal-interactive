@@ -7,6 +7,7 @@ import Card from 'primevue/card'
 import Badge from 'primevue/badge'
 import { Terminal } from 'xterm'
 import { FitAddon } from 'xterm-addon-fit'
+import { initializeApiService, terminalApi } from '../services/api-service'
 
 const route = useRoute()
 const router = useRouter()
@@ -57,7 +58,7 @@ const setupTerminal = () => {
         background: '#000000',
         foreground: '#ffffff',
         cursor: '#ffffff',
-        selection: '#ffffff40'
+        selectionBackground: '#ffffff40'
       },
       convertEol: true,
       rows: 24,
@@ -88,10 +89,11 @@ const setupTerminal = () => {
   }
 }
 
-// WebSocket连接
+// WebSocket连接 / WebSocket connection
 const connectWebSocket = () => {
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-  const wsUrl = `${protocol}//${window.location.host}`
+  // Connect to backend port 1106, not frontend port 1107 / 连接到后端端口1106，而不是前端端口1107
+  const wsUrl = `${protocol}//127.0.0.1:1106`
 
   ws = new WebSocket(wsUrl)
 
@@ -134,10 +136,11 @@ const handleWebSocketMessage = (message: any) => {
   }
 }
 
-// 获取终端信息
+// 获取终端信息 / Fetch terminal details
 const fetchTerminalDetails = async () => {
   try {
-    const response = await fetch(`/api/terminals/${terminalId}`)
+    // Use dynamic API service / 使用动态API服务
+    const response = await terminalApi.get(terminalId)
     if (!response.ok) {
       throw new Error(`Terminal not found (${response.status})`)
     }
@@ -151,11 +154,13 @@ const fetchTerminalDetails = async () => {
 }
 
 // 加载终端历史输出
+// 加载终端历史输出 / Load terminal historical output
 let currentCursor = 0
 const loadTerminalOutput = async () => {
   try {
     console.log('Loading terminal output for:', terminalId)
-    const response = await fetch(`/api/terminals/${terminalId}/output?since=${currentCursor}`)
+    // Use dynamic API service / 使用动态API服务
+    const response = await terminalApi.readOutput(terminalId, currentCursor)
 
     if (!response.ok) {
       const errorText = await response.text()
@@ -179,19 +184,14 @@ const loadTerminalOutput = async () => {
     console.error('Failed to load terminal output:', error)
   }
 }
-
 // 发送命令
+// 发送命令 / Send command
 const sendCommand = async (command: string) => {
   if (!command.trim() || !ws || ws.readyState !== WebSocket.OPEN) return
 
   try {
-    const response = await fetch(`/api/terminals/${terminalId}/input`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ input: command })
-    })
+    // Use dynamic API service / 使用动态API服务
+    const response = await terminalApi.writeInput(terminalId, command)
 
     if (!response.ok) {
       throw new Error(`Failed to send command (${response.status})`)
@@ -200,7 +200,6 @@ const sendCommand = async (command: string) => {
     console.error('Failed to send command:', error)
   }
 }
-
 // 终端输入处理
 const handleTerminalData = (data: string) => {
   sendCommand(data)
@@ -213,12 +212,11 @@ const clearTerminal = () => {
   }
 }
 
-// 终止终端
+// 终止终端 / Kill terminal
 const killTerminal = async () => {
   try {
-    const response = await fetch(`/api/terminals/${terminalId}`, {
-      method: 'DELETE'
-    })
+    // Use dynamic API service / 使用动态API服务
+    const response = await terminalApi.delete(terminalId)
     
     if (response.ok) {
       router.push('/')
@@ -247,14 +245,22 @@ const toggleFullscreen = () => {
 }
 
 onMounted(async () => {
-  await fetchTerminalDetails()
-  setupTerminal()
-  connectWebSocket()
-  await loadTerminalOutput() // 加载历史输出
+  try {
+    // Initialize API service first / 首先初始化API服务
+    await initializeApiService()
+    console.log('API service initialized, fetching terminal details...')
+    await fetchTerminalDetails()
+    setupTerminal()
+    connectWebSocket()
+    await loadTerminalOutput() // 加载历史输出 / Load historical output
 
-  // 设置终端数据处理器
-  if (term) {
-    term.onData(handleTerminalData)
+    // 设置终端数据处理器 / Set terminal data handler
+    if (term) {
+      term.onData(handleTerminalData)
+    }
+  } catch (error) {
+    console.error('Failed to initialize API service:', error)
+    isLoading.value = false
   }
 
   // 强制隐藏xterm.js的辅助元素和页面底部的多余字符

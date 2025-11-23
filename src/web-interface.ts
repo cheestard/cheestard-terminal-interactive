@@ -1,116 +1,133 @@
-import express, { Request, Response } from 'express';
-import { WebSocketServer, WebSocket } from 'ws';
-import { createServer, Server as HttpServer } from 'http';
+import Fastify, { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { WebSocketServer } from 'ws';
+import { createServer } from 'http';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs/promises';
 import yaml from 'js-yaml';
 import { TerminalManager } from './terminal-manager.js';
+import { configManager } from './config-manager.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 /**
- * Web UI 服务器
- * 提供静态文件服务、REST API 和 WebSocket 实时推送
+ * Web Interface 服务器 - 使用 Fastify 框架
+ * Web Interface Server - Using Fastify framework
+ * 提供Web界面、静态文件服务、REST API 和 WebSocket 实时推送
+ * Provides web interface, static file service, REST API and WebSocket real-time push
  */
-export class WebUIServer {
-  private app: express.Application;
-  private httpServer: HttpServer | null = null;
+export class WebInterfaceServer {
+  private fastify: FastifyInstance;
+  private httpServer: any = null;
   private wss: WebSocketServer | null = null;
   private terminalManager: TerminalManager;
-  private clients: Set<WebSocket> = new Set();
+  private clients: Set<any> = new Set();
 
   constructor(terminalManager: TerminalManager) {
     this.terminalManager = terminalManager;
-    this.app = express();
+    this.fastify = Fastify({ logger: false });
     this.setupMiddleware();
   }
 
   /**
    * 设置中间件
+   * Setup middleware
    */
   private setupMiddleware(): void {
-    // JSON 解析
-    this.app.use(express.json());
-    this.app.use(express.urlencoded({ extended: true }));
-
-    // 请求日志
-    this.app.use((req, res, next) => {
-      process.stderr.write(`[WEB-UI] ${req.method} ${req.path}\n`);
-      next();
+    // 请求日志 / Request logging
+    this.fastify.addHook('preHandler', async (request, reply) => {
+      process.stderr.write(`[WEB-UI] ${request.method} ${request.url}\n`);
     });
 
     // 静态文件服务 - 直接使用编译后的前端文件
+    // Static file service - directly use compiled frontend files
     // 使用硬编码的绝对路径确保正确找到前端文件
+    // Use hardcoded absolute path to ensure correct frontend files are found
     const frontendDistPath = 'D:/CodeRelated/cheestard-terminal-interactive/frontend/dist';
-    this.app.use(express.static(frontendDistPath));
+    this.fastify.register(import('@fastify/static'), {
+      root: frontendDistPath,
+      prefix: '/'
+    });
     console.log('使用编译后的前端文件，路径:', frontendDistPath);
     console.log('当前工作目录:', process.cwd());
     console.log('__dirname:', __dirname);
     
     // 同时提供public目录的静态文件
+    // Also provide static files from public directory
     const publicPath = path.resolve(__dirname, '..', 'public');
-    this.app.use('/public', express.static(publicPath));
+    this.fastify.register(import('@fastify/static'), {
+      root: publicPath,
+      prefix: '/public',
+      decorateReply: false
+    });
     
     // 后设置路由，确保静态文件服务优先
+    // Set routes later to ensure static file service takes priority
     this.setupRoutes();
   }
 
   /**
    * 设置路由
+   * Setup routes
    */
   private setupRoutes(): void {
     // REST API 端点 - 必须在通配符路由之前
+    // REST API endpoints - must be before wildcard routes
     this.setupApiRoutes();
 
     // 终端详情页 - 旧的HTML处理
-    this.app.get('/terminal/:id', (req: Request, res: Response) => {
+    // Terminal details page - old HTML handling
+    this.fastify.get('/terminal/:id', async (request: FastifyRequest, reply: FastifyReply) => {
       const indexPath = 'D:/CodeRelated/cheestard-terminal-interactive/frontend/dist/index.html';
-      res.sendFile(indexPath);
+      return reply.sendFile(indexPath);
     });
 
     // 其他路径 - 支持SPA和静态文件，但不包括API路径
-    this.app.get('*', (req: Request, res: Response) => {
+    // Other paths - support SPA and static files, but exclude API paths
+    this.fastify.get('*', async (request: FastifyRequest, reply: FastifyReply) => {
       // 所有非API路径都返回编译后的Vue应用
+      // All non-API paths return the compiled Vue application
       const indexPath = 'D:/CodeRelated/cheestard-terminal-interactive/frontend/dist/index.html';
-      res.sendFile(indexPath);
+      return reply.sendFile(indexPath);
     });
   }
 
   /**
    * 设置 API 路由
+   * Setup API routes
    */
   private setupApiRoutes(): void {
-    // 获取所有终端
-    this.app.get('/api/terminals', async (req: Request, res: Response) => {
+    // 获取所有终端 / Get all terminals
+    this.fastify.get('/api/terminals', async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const result = await this.terminalManager.listTerminals();
-        res.json(result);
+        return result;
       } catch (error) {
-        res.status(500).json({
+        reply.status(500).send({
           error: 'Failed to list terminals',
           message: error instanceof Error ? error.message : String(error)
         });
+        return;
       }
     });
 
-    // 获取终端详情
-    this.app.get('/api/terminals/:id', async (req: Request, res: Response) => {
+    // 获取终端详情 / Get terminal details
+    this.fastify.get('/api/terminals/:id', async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const { id } = req.params;
+        const { id } = request.params as { id: string };
         if (!id) {
-          res.status(400).json({ error: 'Terminal ID is required' });
+          reply.status(400).send({ error: 'Terminal ID is required' });
           return;
         }
         const session = this.terminalManager.getTerminalInfo(id);
         
         if (!session) {
-          res.status(404).json({ error: 'Terminal not found' });
+          reply.status(404).send({ error: 'Terminal not found' });
           return;
         }
 
-        res.json({
+        return {
           id: session.id,
           pid: session.pid,
           shell: session.shell,
@@ -118,19 +135,20 @@ export class WebUIServer {
           created: session.created.toISOString(),
           lastActivity: session.lastActivity.toISOString(),
           status: session.status
-        });
+        };
       } catch (error) {
-        res.status(500).json({
+        reply.status(500).send({
           error: 'Failed to get terminal info',
           message: error instanceof Error ? error.message : String(error)
         });
+        return;
       }
     });
 
-    // 创建终端
-    this.app.post('/api/terminals', async (req: Request, res: Response) => {
+    // 创建终端 / Create terminal
+    this.fastify.post('/api/terminals', async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const { shell, cwd, env } = req.body;
+        const { shell, cwd, env } = request.body as any;
         const terminalId = await this.terminalManager.createTerminal({
           shell,
           cwd,
@@ -139,7 +157,7 @@ export class WebUIServer {
 
         const session = this.terminalManager.getTerminalInfo(terminalId);
         
-        res.status(201).json({
+        reply.status(201).send({
           terminalId,
           status: session?.status,
           pid: session?.pid,
@@ -147,54 +165,56 @@ export class WebUIServer {
           cwd: session?.cwd
         });
 
-        // 广播新终端创建事件
+        // 广播新终端创建事件 / Broadcast new terminal creation event
         this.broadcast({
           type: 'terminal_created',
           terminalId
         });
       } catch (error) {
-        res.status(400).json({
+        reply.status(400).send({
           error: 'Failed to create terminal',
           message: error instanceof Error ? error.message : String(error)
         });
       }
     });
 
-    // 读取终端输出
-    this.app.get('/api/terminals/:id/output', async (req: Request, res: Response) => {
+    // 读取终端输出 / Read terminal output
+    this.fastify.get('/api/terminals/:id/output', async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const { id } = req.params;
+        const { id } = request.params as { id: string };
         if (!id) {
-          res.status(400).json({ error: 'Terminal ID is required' });
+          reply.status(400).send({ error: 'Terminal ID is required' });
           return;
         }
-        const { since, maxLines, mode } = req.query;
+        const query = request.query as any;
+        const { since, maxLines, mode } = query;
 
         const result = await this.terminalManager.readFromTerminal({
           terminalName: id,
-          since: since ? parseInt(since as string) : undefined,
-          maxLines: maxLines ? parseInt(maxLines as string) : undefined,
+          since: since ? parseInt(since) : undefined,
+          maxLines: maxLines ? parseInt(maxLines) : undefined,
           mode: mode as any
         });
 
-        res.json(result);
+        return result;
       } catch (error) {
-        res.status(400).json({
+        reply.status(400).send({
           error: 'Failed to read terminal output',
           message: error instanceof Error ? error.message : String(error)
         });
+        return;
       }
     });
 
-    // 写入终端输入
-    this.app.post('/api/terminals/:id/input', async (req: Request, res: Response) => {
+    // 写入终端输入 / Write terminal input
+    this.fastify.post('/api/terminals/:id/input', async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const { id } = req.params;
+        const { id } = request.params as { id: string };
         if (!id) {
-          res.status(400).json({ error: 'Terminal ID is required' });
+          reply.status(400).send({ error: 'Terminal ID is required' });
           return;
         }
-        const { input, appendNewline } = req.body;
+        const { input, appendNewline } = request.body as any;
 
         await this.terminalManager.writeToTerminal({
           terminalName: id,
@@ -202,125 +222,131 @@ export class WebUIServer {
           appendNewline
         });
 
-        res.json({ success: true });
+        return { success: true };
       } catch (error) {
-        res.status(400).json({
+        reply.status(400).send({
           error: 'Failed to write to terminal',
           message: error instanceof Error ? error.message : String(error)
         });
+        return;
       }
     });
 
-    // 终止终端
-    this.app.delete('/api/terminals/:id', async (req: Request, res: Response) => {
+    // 终止终端 / Terminate terminal
+    this.fastify.delete('/api/terminals/:id', async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const { id } = req.params;
+        const { id } = request.params as { id: string };
         if (!id) {
-          res.status(400).json({ error: 'Terminal ID is required' });
+          reply.status(400).send({ error: 'Terminal ID is required' });
           return;
         }
-        const { signal } = req.query;
+        const query = request.query as any;
+        const { signal } = query;
 
         await this.terminalManager.killTerminal(id, signal as string);
 
-        res.json({ success: true });
-
-        // 广播终端终止事件
+        // 广播终端终止事件 / Broadcast terminal termination event
         this.broadcast({
           type: 'terminal_killed',
           terminalId: id
         });
+
+        return { success: true };
       } catch (error) {
-        res.status(400).json({
+        reply.status(400).send({
           error: 'Failed to kill terminal',
           message: error instanceof Error ? error.message : String(error)
         });
+        return;
       }
     });
 
-    // 获取终端统计
-    this.app.get('/api/terminals/:id/stats', async (req: Request, res: Response) => {
+    // 获取终端统计 / Get terminal statistics
+    this.fastify.get('/api/terminals/:id/stats', async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const { id } = req.params;
+        const { id } = request.params as { id: string };
         if (!id) {
-          res.status(400).json({ error: 'Terminal ID is required' });
+          reply.status(400).send({ error: 'Terminal ID is required' });
           return;
         }
         const result = await this.terminalManager.getTerminalStats(id);
-        res.json(result);
+        return result;
       } catch (error) {
-        res.status(400).json({
+        reply.status(400).send({
           error: 'Failed to get terminal stats',
           message: error instanceof Error ? error.message : String(error)
         });
+        return;
       }
     });
 
-    // 设置相关API
+    // 设置相关API / Settings related API
     this.setupSettingsRoutes();
   }
 
   /**
    * 设置设置相关的API路由
+   * Setup settings related API routes
    */
   private setupSettingsRoutes(): void {
-    const configPath = path.resolve(process.cwd(), 'config.yaml');
+    const configPath = path.resolve(process.cwd(), 'config.yml');
 
-    // 获取设置
-    // 获取设置
-    this.app.get('/api/settings', async (req: Request, res: Response): Promise<void> => {
+    // 获取设置 / Get settings
+    this.fastify.get('/api/settings', async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        // 检查配置文件是否存在
+        // 检查配置文件是否存在 / Check if config file exists
         try {
           await fs.access(configPath);
         } catch {
-          // 文件不存在，返回默认设置
-          res.json({
+          // 文件不存在，返回默认设置 / File doesn't exist, return default settings
+          return {
             language: 'zh'
-          });
-          return;
+          };
         }
 
-        // 读取配置文件
+        // 读取配置文件 / Read config file
         const configContent = await fs.readFile(configPath, 'utf8');
         const config = yaml.load(configContent) as any;
         
-        res.json({
+        return {
           language: config.language || 'zh'
-        });
+        };
       } catch (error) {
         console.error('Failed to read settings:', error);
-        res.status(500).json({
+        reply.status(500).send({
           error: 'Failed to read settings',
           message: error instanceof Error ? error.message : String(error)
         });
+        return;
       }
     });
-    // 保存设置
-    this.app.post('/api/settings', async (req: Request, res: Response): Promise<void> => {
+
+    // 保存设置 / Save settings
+    this.fastify.post('/api/settings', async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const { language } = req.body;
+        const { language } = request.body as any;
 
         if (!language || (language !== 'zh' && language !== 'en')) {
-          res.status(400).json({
+          reply.status(400).send({
             error: 'Invalid language setting'
           });
           return;
         }
 
-        // 读取现有配置
+        // 读取现有配置 / Read existing configuration
         let config: any = {};
         try {
           const configContent = await fs.readFile(configPath, 'utf8');
           config = yaml.load(configContent) as any || {};
         } catch {
           // 文件不存在或读取失败，使用空配置
+          // File doesn't exist or read failed, use empty config
         }
 
-        // 更新语言设置
+        // 更新语言设置 / Update language setting
         config.language = language;
 
-        // 写入配置文件
+        // 写入配置文件 / Write config file
         const yamlContent = yaml.dump(config, {
           indent: 2,
           lineWidth: 120
@@ -328,53 +354,56 @@ export class WebUIServer {
         
         await fs.writeFile(configPath, yamlContent, 'utf8');
 
-        res.json({
+        return {
           success: true,
           message: 'Settings saved successfully',
           language
-        });
+        };
       } catch (error) {
         console.error('Failed to save settings:', error);
-        res.status(500).json({
+        reply.status(500).send({
           error: 'Failed to save settings',
           message: error instanceof Error ? error.message : String(error)
         });
+        return;
       }
     });
 
-    // 重置设置
-    this.app.delete('/api/settings', async (req: Request, res: Response): Promise<void> => {
+    // 重置设置 / Reset settings
+    this.fastify.delete('/api/settings', async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        // 删除配置文件
+        // 删除配置文件 / Delete config file
         try {
           await fs.unlink(configPath);
         } catch {
-          // 文件不存在，忽略错误
+          // 文件不存在，忽略错误 / File doesn't exist, ignore error
         }
 
-        res.json({
+        return {
           success: true,
           message: 'Settings reset successfully'
-        });
+        };
       } catch (error) {
         console.error('Failed to reset settings:', error);
-        res.status(500).json({
+        reply.status(500).send({
           error: 'Failed to reset settings',
           message: error instanceof Error ? error.message : String(error)
         });
+        return;
       }
     });
   }
 
   /**
    * 设置 WebSocket
+   * Setup WebSocket
    */
   private setupWebSocket(): void {
     if (!this.httpServer) return;
 
     this.wss = new WebSocketServer({ server: this.httpServer });
 
-    this.wss.on('connection', (ws: WebSocket) => {
+    this.wss.on('connection', (ws: any) => {
       this.clients.add(ws);
 
       process.stderr.write('[WEB-UI] WebSocket client connected\n');
@@ -384,12 +413,12 @@ export class WebUIServer {
         process.stderr.write('[WEB-UI] WebSocket client disconnected\n');
       });
 
-      ws.on('error', (error) => {
+      ws.on('error', (error: any) => {
         process.stderr.write(`[WEB-UI] WebSocket error: ${error}\n`);
       });
     });
 
-    // 监听终端事件并广播
+    // 监听终端事件并广播 / Listen to terminal events and broadcast
     this.terminalManager.on('terminalOutput', (terminalId: string, data: string) => {
       this.broadcast({
         type: 'output',
@@ -408,11 +437,12 @@ export class WebUIServer {
 
   /**
    * 广播消息给所有客户端
+   * Broadcast message to all clients
    */
   private broadcast(message: any): void {
     const payload = JSON.stringify(message);
     this.clients.forEach((client) => {
-      if (client.readyState === WebSocket.OPEN) {
+      if (client.readyState === 1) { // WebSocket.OPEN
         client.send(payload);
       }
     });
@@ -420,21 +450,26 @@ export class WebUIServer {
 
   /**
    * 启动服务器
+   * Start server
    */
   async start(port: number): Promise<void> {
     return new Promise((resolve, reject) => {
-      this.httpServer = createServer(this.app);
+      this.httpServer = createServer();
+      
+      // 将 Fastify 实例绑定到 HTTP 服务器
+      // Bind Fastify instance to HTTP server
+      this.fastify.server = this.httpServer;
       
       this.httpServer.listen(port, '127.0.0.1', () => {
         process.stderr.write(`[WEB-UI] Server started on http://localhost:${port}\n`);
         
-        // 启动 WebSocket
+        // 启动 WebSocket / Start WebSocket
         this.setupWebSocket();
         
         resolve();
       });
 
-      this.httpServer.on('error', (error) => {
+      this.httpServer.on('error', (error: any) => {
         reject(error);
       });
     });
@@ -442,22 +477,23 @@ export class WebUIServer {
 
   /**
    * 停止服务器
+   * Stop server
    */
   async stop(): Promise<void> {
     return new Promise((resolve) => {
-      // 关闭所有 WebSocket 连接
+      // 关闭所有 WebSocket 连接 / Close all WebSocket connections
       this.clients.forEach((client) => {
         client.close();
       });
       this.clients.clear();
 
-      // 关闭 WebSocket 服务器
+      // 关闭 WebSocket 服务器 / Close WebSocket server
       if (this.wss) {
         this.wss.close();
         this.wss = null;
       }
 
-      // 关闭 HTTP 服务器
+      // 关闭 HTTP 服务器 / Close HTTP server
       if (this.httpServer) {
         this.httpServer.close(() => {
           process.stderr.write('[WEB-UI] Server stopped\n');
@@ -470,4 +506,3 @@ export class WebUIServer {
     });
   }
 }
-

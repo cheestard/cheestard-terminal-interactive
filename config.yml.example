@@ -1,0 +1,37 @@
+
+# 语言设置 / Language Setting
+language: 'zh'  # zh, en
+
+# 服务器配置 / Server Configuration
+server:
+  host: '127.0.0.1'
+  port: 1106
+  cors:
+    origin: 
+      - 'http://localhost:1107'
+      - 'http://127.0.0.1:1107'
+    credentials: true
+
+# 终端配置 / Terminal Configuration
+terminal:
+  defaultShell: 'pwsh.exe'  # Windows下默认使用pwsh.exe
+  fontSize: 14
+  fontFamily: 'Consolas, "Courier New", monospace'
+  maxBufferSize: 10000
+  sessionTimeout: 86400000  # 24小时 / 24 hours
+  defaultEnv: {}  # 默认环境变量 / Default environment variables
+
+# MCP配置 / MCP Configuration
+mcp:
+  enableDnsRebindingProtection: false
+  allowedHosts: 
+    - '127.0.0.1'
+    - 'localhost'
+    - 'localhost:1106'
+
+# 日志配置 / Logging Configuration
+logging:
+  level: 'info'  # debug, info, warn, error
+  enableConsole: true
+  enableFile: false
+  filePath: './logs/app.log'

@@ -93,14 +93,25 @@ export class TerminalManager extends EventEmitter {
    */
   async createTerminal(options: TerminalCreateOptions & {terminalName?: string} = {}): Promise<string> {
     const internalId = uuidv4();
-    // 支持终端名称参数
-    // Support terminal name parameter
-    const terminalName = options.terminalName || internalId;
+    
+    // 必须提供终端名称，禁止使用UUID
+    // Terminal name is required, UUID usage is prohibited
+    if (!options.terminalName) {
+      throw new Error('必须提供终端名称，禁止使用UUID作为终端标识符。请提供一个有意义的简短描述作为终端名称。');
+    }
+    
+    const terminalName = options.terminalName;
     
     // 检查终端名称是否已存在
     // Check if terminal name already exists
-    if (terminalName !== internalId && this.terminalNameMap.has(terminalName)) {
+    if (this.terminalNameMap.has(terminalName)) {
       throw new Error(`终端名称 "${terminalName}" 已存在，请选择其他名称`);
+    }
+    
+    // 验证终端名称格式 - 不允许UUID格式
+    // Validate terminal name format - UUID format is not allowed
+    if (/^[0-9a-f]{8}-/i.test(terminalName)) {
+      throw new Error('禁止使用UUID格式的终端名称，请使用有意义的描述性名称');
     }
     
     // 建立映射关系

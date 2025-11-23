@@ -18,14 +18,35 @@ export default defineConfig({
       output: {
         entryFileNames: `assets/[name]-[hash].js`,
         chunkFileNames: `assets/[name]-[hash].js`,
-        assetFileNames: `assets/[name]-[hash].[ext]`
+        assetFileNames: `assets/[name]-[hash].[ext]`,
+        // 手动分块以减小块大小
+        manualChunks: (id: string) => {
+          // 将Vue相关库分离到单独的块
+          if (id.includes('node_modules/vue') ||
+              id.includes('node_modules/vue-router') ||
+              id.includes('node_modules/pinia') ||
+              id.includes('node_modules/@vueuse')) {
+            return 'vue-vendor'
+          }
+          // 将PrimeVue相关库分离到单独的块
+          if (id.includes('node_modules/primevue') ||
+              id.includes('node_modules/primeicons')) {
+            return 'prime-vendor'
+          }
+          // 将xterm相关库分离到单独的块
+          if (id.includes('node_modules/xterm')) {
+            return 'terminal-vendor'
+          }
+        }
       }
     },
     // 禁用LightningCSS，使用默认的CSS处理器
     minify: 'esbuild',
     cssMinify: false, // 完全禁用CSS压缩以避免LightningCSS警告
     // 生成source map，在生产环境中也能看到源码错误位置
-    sourcemap: true
+    sourcemap: true,
+    // 增加块大小警告限制，避免不必要的警告
+    chunkSizeWarningLimit: 1000
   },
   css: {
     // 禁用LightningCSS转换器

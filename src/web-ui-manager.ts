@@ -1,4 +1,4 @@
-import { WebUIServer } from './web-ui-server.js';
+import { WebInterfaceServer } from './web-interface.js';
 import { WebUIStartOptions, WebUIStartResult } from './types.js';
 import { exec } from 'child_process';
 import { createServer } from 'net';
@@ -8,7 +8,7 @@ import { createServer } from 'net';
  * 负责管理 Web 服务器的生命周期、端口分配和浏览器打开
  */
 export class WebUIManager {
-  private server: WebUIServer | null = null;
+  private server: WebInterfaceServer | null = null;
   private currentPort: number | null = null;
 
   /**
@@ -25,8 +25,8 @@ export class WebUIManager {
     // 查找可用端口
     const port = await this.findAvailablePort(options.port || 1107);
 
-    // 启动 Web 服务器
-    this.server = new WebUIServer(options.terminalManager);
+    // 启动 Web 服务器 / Start web server
+    this.server = new WebInterfaceServer(options.terminalManager);
     await this.server.start(port);
     this.currentPort = port;
 

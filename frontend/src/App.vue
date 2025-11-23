@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import Button from 'primevue/button'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useTerminalStore } from './stores/terminal'
 import { useI18n } from 'vue-i18n'
 
 const { t } = useI18n()
 const router = useRouter()
+const route = useRoute()
 
 const isLoaded = ref(false)
 const terminalStore = useTerminalStore()
@@ -37,61 +38,59 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="app-container" :class="{ 'app-loaded': isLoaded }">
+  <div class="app-container bg-gradient-dark text-text-primary" :class="{ 'app-loaded': isLoaded }">
     <!-- 背景装饰元素 -->
-    <div class="bg-decoration">
-      <div class="bg-circle bg-circle-1"></div>
-      <div class="bg-circle bg-circle-2"></div>
-      <div class="bg-circle bg-circle-3"></div>
-      <div class="bg-grid"></div>
+    <div class="fixed inset-0 pointer-events-none overflow-hidden">
+      <div class="absolute top-0 right-0 w-96 h-96 bg-neon-blue opacity-20 rounded-full filter blur-3xl animate-float"></div>
+      <div class="absolute bottom-0 left-0 w-80 h-80 bg-neon-purple opacity-20 rounded-full filter blur-3xl animate-float" style="animation-delay: 2s;"></div>
+      <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-neon-green opacity-10 rounded-full filter blur-3xl animate-float" style="animation-delay: 4s;"></div>
+      <div class="absolute inset-0 bg-grid-pattern opacity-5"></div>
     </div>
 
     <!-- 主内容区域 -->
-    <div class="main-content">
-      <!-- 顶部导航栏 -->
-      <header class="app-header">
-        <div class="header-content">
-          <div class="logo-section">
-            <div class="logo-icon">
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <div class="relative z-10 h-screen flex flex-col">
+      <!-- 顶部导航栏 - 只在首页显示 -->
+      <header v-if="route.name === 'home'" class="glass-effect border-b border-border-dark sticky top-0 z-50 animate-slide-up">
+        <div class="w-full h-16 flex items-center justify-between px-4">
+          <!-- 左侧：Logo和标题 -->
+          <div class="flex items-center space-x-4 flex-shrink-0">
+            <div class="w-10 h-10 bg-gradient-neon rounded-lg flex items-center justify-center text-white shadow-neon-blue hover:scale-105 transition-transform duration-200">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M4 4h16v16H4z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 <path d="M4 9h16M9 4v16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
             </div>
-            <h1 class="logo-text">Cheestard Terminal Interactive</h1>
+            <h1 class="text-xl font-bold bg-gradient-neon bg-clip-text text-transparent">Cheestard Terminal Interactive</h1>
           </div>
           
-          <div class="header-stats">
-            <!-- 统计文字图标 - 不换行 -->
-            <div class="stats-text">
-              <span class="stat-text-item">
-                <i class="pi pi-server"></i>
-                {{ stats.total }} {{ t('app.totalTerminals') }}
+          <!-- 右侧：统计信息和设置按钮 -->
+          <div class="flex items-center space-x-6 flex-shrink-0">
+            <div class="hidden md:flex items-center space-x-6">
+              <span class="flex items-center space-x-2 text-sm text-text-secondary">
+                <i class="pi pi-server text-neon-blue"></i>
+                <span>{{ stats.total }} {{ t('app.totalTerminals') }}</span>
               </span>
-              <span class="stat-text-item">
-                <i class="pi pi-play-circle"></i>
-                {{ stats.active }} {{ t('app.active') }}
+              <span class="flex items-center space-x-2 text-sm text-text-secondary">
+                <i class="pi pi-play-circle text-green-500"></i>
+                <span>{{ stats.active }} {{ t('app.active') }}</span>
               </span>
-              <span class="stat-text-item">
-                <i class="pi pi-pause-circle"></i>
-                {{ stats.inactive }} {{ t('app.inactive') }}
+              <span class="flex items-center space-x-2 text-sm text-text-secondary">
+                <i class="pi pi-pause-circle text-yellow-500"></i>
+                <span>{{ stats.inactive }} {{ t('app.inactive') }}</span>
               </span>
-              <span class="stat-text-item">
-                <i class="pi pi-stop-circle"></i>
-                {{ stats.terminated }} {{ t('app.terminated') }}
+              <span class="flex items-center space-x-2 text-sm text-text-secondary">
+                <i class="pi pi-stop-circle text-red-500"></i>
+                <span>{{ stats.terminated }} {{ t('app.terminated') }}</span>
               </span>
             </div>
-          </div>
-          
-          <div class="header-actions">
-            <!-- 设置按钮 -->
+            
             <Button
               icon="pi pi-cog"
               v-tooltip="t('settings.title')"
               severity="secondary"
               text
               rounded
-              class="settings-btn"
+              class="w-10 h-10 text-text-secondary hover:text-neon-blue hover:bg-bg-glass-hover transition-all duration-200 hover:rotate-90"
               @click="navigateToSettings"
             />
           </div>
@@ -99,14 +98,12 @@ onMounted(() => {
       </header>
 
       <!-- 页面内容 -->
-      <main class="app-main">
-        <div class="page-wrapper">
-          <router-view v-slot="{ Component }">
-            <transition name="page" mode="out-in">
-              <component :is="Component" />
-            </transition>
-          </router-view>
-        </div>
+      <main class="flex-1 overflow-hidden">
+        <router-view v-slot="{ Component }">
+          <transition name="page" mode="out-in">
+            <component :is="Component" />
+          </transition>
+        </router-view>
       </main>
     </div>
   </div>
@@ -115,446 +112,161 @@ onMounted(() => {
 <style scoped>
 /* 应用容器 */
 .app-container {
-  min-height: 100vh;
-  background: var(--bg-primary);
+  height: 100vh;
+  background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #2d2d2d 100%);
   position: relative;
-  overflow-x: hidden;
-  opacity: 0;
-  transform: translateY(20px);
-  transition: all var(--transition-slow);
 }
 
-.app-loaded {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-/* 背景装饰 */
-.bg-decoration {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 0;
-}
-
-.bg-circle {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(80px);
-  opacity: 0.3;
-  animation: float 20s ease-in-out infinite;
-}
-
-.bg-circle-1 {
-  width: 400px;
-  height: 400px;
-  background: var(--primary-400);
-  top: -200px;
-  right: -200px;
-  animation-delay: 0s;
-}
-
-.bg-circle-2 {
-  width: 300px;
-  height: 300px;
-  background: var(--secondary-400);
-  bottom: -150px;
-  left: -150px;
-  animation-delay: 5s;
-}
-
-.bg-circle-3 {
-  width: 250px;
-  height: 250px;
-  background: var(--success-400);
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  animation-delay: 10s;
-}
-
-.bg-grid {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-image: 
-    linear-gradient(rgba(148, 163, 184, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(148, 163, 184, 0.05) 1px, transparent 1px);
-  background-size: 50px 50px;
-}
-
-/* 主内容区域 */
-.main-content {
-  position: relative;
-  z-index: 1;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-}
-
-/* 顶部导航栏 */
-.app-header {
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(20px);
-  border-bottom: 1px solid var(--border-light);
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  animation: slideDown var(--transition-slow) ease-out;
-}
-
-.header-content {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 0 var(--spacing-lg);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  height: 70px;
-}
-
-.logo-section {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing);
-}
-
-.logo-icon {
-  width: 40px;
-  height: 40px;
-  background: var(--gradient-primary);
-  border-radius: var(--radius-lg);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  box-shadow: var(--shadow-md);
-  transition: all var(--transition-fast);
-}
-
-.logo-icon:hover {
-  transform: scale(1.05);
-  box-shadow: var(--shadow-lg);
-}
-
-.logo-text {
-  font-size: var(--text-xl);
-  font-weight: 700;
-  background: var(--gradient-primary);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  margin: 0;
-}
-
-.header-stats {
-  display: flex;
-  align-items: center;
-  margin-right: var(--spacing-lg);
-}
-
-.stats-text {
-  display: flex;
-  gap: var(--spacing-md);
-  align-items: center;
-  white-space: nowrap;
-}
-
-.stat-text-item {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-xs);
-  font-size: var(--text-sm);
-  color: var(--text-primary);
-  font-weight: 500;
-}
-
-.stat-text-item i {
-  font-size: var(--text-sm);
-}
-
-.stat-text-item:nth-child(1) i {
-  color: var(--primary-500);
-}
-
-.stat-text-item:nth-child(2) i {
-  color: var(--success-500);
-}
-
-.stat-text-item:nth-child(3) i {
-  color: var(--warning-500);
-}
-
-.stat-text-item:nth-child(4) i {
-  color: var(--danger-500);
-}
-
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing);
-}
-
-.settings-btn {
-  width: 40px !important;
-  height: 40px !important;
-  font-size: var(--text-lg) !important;
-  transition: all var(--transition-fast);
-}
-
-.settings-btn:hover {
-  background-color: var(--primary-50) !important;
-  color: var(--primary-500) !important;
-  transform: rotate(90deg);
-}
-
-/* 主内容区域 */
-.app-main {
-  flex: 1;
-  padding: var(--spacing-lg);
-}
-
-.page-wrapper {
-  max-width: 1400px;
-  margin: 0 auto;
-  animation: fadeIn var(--transition-slow) ease-out;
-}
-
-/* 页面切换动画 */
-.page-enter-active,
-.page-leave-active {
-  transition: all var(--transition-normal);
-}
-
-.page-enter-from {
-  opacity: 0;
-  transform: translateX(20px);
-}
-
-.page-leave-to {
-  opacity: 0;
-  transform: translateX(-20px);
-}
-
-/* 动画定义 */
-@keyframes float {
-  0%, 100% {
-    transform: translate(0, 0) scale(1);
-  }
-  25% {
-    transform: translate(30px, -30px) scale(1.05);
-  }
-  50% {
-    transform: translate(-20px, 20px) scale(0.95);
-  }
-  75% {
-    transform: translate(-30px, -10px) scale(1.02);
-  }
-}
-
-@keyframes slideDown {
-  from {
+/* 应用容器动画 */
+  .app-container {
     opacity: 0;
-    transform: translateY(-20px);
+    transform: translateY(20px);
+    transition: all 0.5s ease-out;
   }
-  to {
+  
+  .app-loaded {
     opacity: 1;
     transform: translateY(0);
   }
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* 响应式设计 */
-@media (max-width: 768px) {
-  .header-content {
-    padding: 0 var(--spacing);
-    height: 60px;
-  }
-
-  .logo-text {
-    font-size: var(--text-lg);
-  }
-
-  .app-main {
-    padding: var(--spacing);
-  }
-
-  .bg-circle-1 {
-    width: 300px;
-    height: 300px;
-  }
-
-  .bg-circle-2 {
-    width: 200px;
-    height: 200px;
-  }
-
-  .bg-circle-3 {
-    width: 150px;
-    height: 150px;
-  }
-}
-
-@media (max-width: 480px) {
-  .logo-section {
-    gap: var(--spacing-sm);
-  }
-
-  .logo-icon {
-    width: 35px;
-    height: 35px;
-  }
-
-  .logo-text {
-    font-size: var(--text-base);
-  }
-}
-
-/* 暗色模式支持 */
-@media (prefers-color-scheme: dark) {
-  .app-header {
-    background: rgba(15, 23, 42, 0.8);
-    border-bottom-color: var(--border-light);
-  }
-
-  .bg-grid {
-    background-image: 
+  
+  /* 背景网格图案 */
+  .bg-grid-pattern {
+    background-image:
       linear-gradient(rgba(71, 85, 105, 0.1) 1px, transparent 1px),
       linear-gradient(90deg, rgba(71, 85, 105, 0.1) 1px, transparent 1px);
+    background-size: 50px 50px;
   }
-}
-
-/* 高对比度模式支持 */
-@media (prefers-contrast: high) {
-  .app-header {
-    background: var(--bg-primary);
-    backdrop-filter: none;
-    border-bottom-width: 2px;
-  }
-
-  .bg-circle {
-    opacity: 0.1;
-  }
-}
-
-/* 减少动画偏好支持 */
-@media (prefers-reduced-motion: reduce) {
-  .app-container,
-  .app-header,
-  .page-wrapper,
-  .bg-circle {
-    animation: none;
-    transition: none;
-  }
-
+  
+  /* 页面切换动画 */
   .page-enter-active,
   .page-leave-active {
-    transition: none;
+    transition: all 0.3s ease;
   }
-}
-</style>
-
-<style>
-/* 全局样式重置和增强 */
-* {
-  box-sizing: border-box;
-}
-
-html {
-  scroll-behavior: smooth;
-  height: 100%;
-  overflow: hidden;
-}
-
-body {
-  margin: 0;
-  font-family: var(--font-sans);
-  font-size: var(--text-base);
-  line-height: var(--leading-normal);
-  color: var(--text-primary);
-  background-color: var(--bg-primary);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  transition: background-color var(--transition-normal), color var(--transition-normal);
-  height: 100%;
-  overflow: auto;
-}
-
-/* 自定义滚动条 */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: var(--bg-secondary);
-  border-radius: var(--radius);
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--border-medium);
-  border-radius: var(--radius);
-  transition: background var(--transition-fast);
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--border-dark);
-}
-
-/* Firefox 滚动条 */
-* {
-  scrollbar-width: thin;
-  scrollbar-color: var(--border-medium) var(--bg-secondary);
-}
-
-/* 选择文本样式 */
-::selection {
-  background: var(--primary-200);
-  color: var(--primary-900);
-}
-
-::-moz-selection {
-  background: var(--primary-200);
-  color: var(--primary-900);
-}
-
-/* 焦点样式 */
-:focus-visible {
-  outline: 2px solid var(--primary-500);
-  outline-offset: 2px;
-}
-
-/* 终端输出自定义滚动条 */
-#terminal-output::-webkit-scrollbar {
-  width: 8px;
-}
-
-#terminal-output::-webkit-scrollbar-track {
-  background: var(--bg-dark-secondary);
-  border-radius: var(--radius);
-}
-
-#terminal-output::-webkit-scrollbar-thumb {
-  background: var(--gray-600);
-  border-radius: var(--radius);
-}
-
-#terminal-output::-webkit-scrollbar-thumb:hover {
-  background: var(--gray-500);
-}
-</style>
+  
+  .page-enter-from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  
+  .page-leave-to {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  
+  /* 响应式设计 */
+  @media (max-width: 768px) {
+    .app-container h1 {
+      font-size: 1.125rem;
+    }
+  }
+  
+  /* 高对比度模式支持 */
+  @media (prefers-contrast: high) {
+    .glass-effect {
+      background: rgba(255, 255, 255, 0.1);
+      border: 2px solid #ffffff;
+    }
+  }
+  
+  /* 减少动画偏好支持 */
+  @media (prefers-reduced-motion: reduce) {
+    .app-container,
+    .glass-effect {
+      animation: none;
+      transition: none;
+    }
+  
+    .page-enter-active,
+    .page-leave-active {
+      transition: none;
+    }
+  }
+  </style>
+  
+  <style>
+  /* 全局样式重置和增强 */
+  * {
+    box-sizing: border-box;
+  }
+  
+  html {
+    scroll-behavior: smooth;
+    height: 100%;
+  }
+  
+  body {
+    margin: 0;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    color: #ffffff;
+    background-color: #0a0a0a;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    height: 100%;
+    overflow: hidden;
+  }
+  
+  /* 自定义滚动条 */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: #1a1a1a;
+    border-radius: 4px;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background: #334155;
+    border-radius: 4px;
+    transition: background 0.2s ease;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background: #64748b;
+  }
+  
+  /* Firefox 滚动条 */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #334155 #1a1a1a;
+  }
+  
+  /* 选择文本样式 */
+  ::selection {
+    background: #00d4ff;
+    color: #0a0a0a;
+  }
+  
+  ::-moz-selection {
+    background: #00d4ff;
+    color: #0a0a0a;
+  }
+  
+  /* 焦点样式 */
+  :focus-visible {
+    outline: 2px solid #00d4ff;
+    outline-offset: 2px;
+  }
+  
+  /* 终端输出自定义滚动条 */
+  #terminal-output::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  #terminal-output::-webkit-scrollbar-track {
+    background: #1a1a1a;
+    border-radius: 4px;
+  }
+  
+  #terminal-output::-webkit-scrollbar-thumb {
+    background: #64748b;
+    border-radius: 4px;
+  }
+  
+  #terminal-output::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+  }
+  </style>

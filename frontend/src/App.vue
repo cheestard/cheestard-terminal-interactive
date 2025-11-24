@@ -38,48 +38,41 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="app-container bg-gradient-dark text-text-primary" :class="{ 'app-loaded': isLoaded }">
-    <!-- 背景装饰元素 -->
-    <div class="fixed inset-0 pointer-events-none overflow-hidden">
-      <div class="absolute top-0 right-0 w-96 h-96 bg-neon-blue opacity-20 rounded-full filter blur-3xl animate-float"></div>
-      <div class="absolute bottom-0 left-0 w-80 h-80 bg-neon-purple opacity-20 rounded-full filter blur-3xl animate-float" style="animation-delay: 2s;"></div>
-      <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-neon-green opacity-10 rounded-full filter blur-3xl animate-float" style="animation-delay: 4s;"></div>
-      <div class="absolute inset-0 bg-grid-pattern opacity-5"></div>
-    </div>
+  <div class="app-container luxury-theme text-text-primary" :class="{ 'app-loaded': isLoaded }">
 
     <!-- 主内容区域 -->
     <div class="relative z-10 h-screen flex flex-col">
-      <!-- 顶部导航栏 - 只在首页显示 -->
-      <header v-if="route.name === 'home'" class="glass-effect border-b border-border-dark sticky top-0 z-50 animate-slide-up">
+      <!-- 奢华顶部导航栏 - 只在首页显示 -->
+      <header v-if="route.name === 'home'" class="luxury-header sticky top-0 z-50 animate-slide-up">
         <div class="w-full h-16 flex items-center justify-between px-4">
           <!-- 左侧：Logo和标题 -->
           <div class="flex items-center space-x-4 flex-shrink-0">
-            <div class="w-10 h-10 bg-gradient-neon rounded-lg flex items-center justify-center text-white shadow-neon-blue hover:scale-105 transition-transform duration-200">
+            <div class="w-10 h-10 luxury-logo-container rounded-lg flex items-center justify-center text-jet-black hover:scale-105 transition-transform duration-200 shadow-luxury">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M4 4h16v16H4z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 <path d="M4 9h16M9 4v16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
             </div>
-            <h1 class="text-xl font-bold bg-gradient-neon bg-clip-text text-transparent">Cheestard Terminal Interactive</h1>
+            <h1 class="text-xl font-bold font-serif-luxury bg-gradient-luxury bg-clip-text text-transparent">Cheestard Terminal Interactive</h1>
           </div>
           
           <!-- 右侧：统计信息和设置按钮 -->
           <div class="flex items-center space-x-6 flex-shrink-0">
             <div class="hidden md:flex items-center space-x-6">
-              <span class="flex items-center space-x-2 text-sm text-text-secondary">
-                <i class="pi pi-server text-neon-blue"></i>
+              <span class="flex items-center space-x-2 text-sm text-text-secondary luxury-stat-item">
+                <i class="pi pi-server text-luxury-gold"></i>
                 <span>{{ stats.total }} {{ t('app.totalTerminals') }}</span>
               </span>
-              <span class="flex items-center space-x-2 text-sm text-text-secondary">
-                <i class="pi pi-play-circle text-green-500"></i>
+              <span class="flex items-center space-x-2 text-sm text-text-secondary luxury-stat-item">
+                <i class="pi pi-play-circle text-emerald-400"></i>
                 <span>{{ stats.active }} {{ t('app.active') }}</span>
               </span>
-              <span class="flex items-center space-x-2 text-sm text-text-secondary">
-                <i class="pi pi-pause-circle text-yellow-500"></i>
+              <span class="flex items-center space-x-2 text-sm text-text-secondary luxury-stat-item">
+                <i class="pi pi-pause-circle text-amber-400"></i>
                 <span>{{ stats.inactive }} {{ t('app.inactive') }}</span>
               </span>
-              <span class="flex items-center space-x-2 text-sm text-text-secondary">
-                <i class="pi pi-stop-circle text-red-500"></i>
+              <span class="flex items-center space-x-2 text-sm text-text-secondary luxury-stat-item">
+                <i class="pi pi-stop-circle text-rose-400"></i>
                 <span>{{ stats.terminated }} {{ t('app.terminated') }}</span>
               </span>
             </div>
@@ -90,7 +83,7 @@ onMounted(() => {
               severity="secondary"
               text
               rounded
-              class="w-10 h-10 text-text-secondary hover:text-neon-blue hover:bg-bg-glass-hover transition-all duration-200 hover:rotate-90"
+              class="w-10 h-10 luxury-settings-button hover:text-luxury-gold transition-all duration-200 hover:rotate-90"
               @click="navigateToSettings"
             />
           </div>
@@ -110,18 +103,19 @@ onMounted(() => {
 </template>
 
 <style scoped>
-/* 应用容器 */
-.app-container {
+/* 奢华应用容器 */
+.luxury-theme {
   height: 100vh;
-  background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #2d2d2d 100%);
+  background: linear-gradient(135deg, var(--jet-black) 0%, var(--charcoal) 40%, var(--onyx) 70%, var(--graphite) 100%);
   position: relative;
+  font-family: var(--font-sans-luxury);
 }
 
-/* 应用容器动画 */
-  .app-container {
+/* 奢华应用容器动画 */
+  .luxury-theme {
     opacity: 0;
     transform: translateY(20px);
-    transition: all 0.5s ease-out;
+    transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
   }
   
   .app-loaded {
@@ -129,12 +123,79 @@ onMounted(() => {
     transform: translateY(0);
   }
   
-  /* 背景网格图案 */
-  .bg-grid-pattern {
+  /* 奢华网格背景 */
+  .luxury-grid-pattern {
     background-image:
-      linear-gradient(rgba(71, 85, 105, 0.1) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(71, 85, 105, 0.1) 1px, transparent 1px);
-    background-size: 50px 50px;
+      linear-gradient(rgba(212, 175, 55, 0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(212, 175, 55, 0.05) 1px, transparent 1px);
+    background-size: 60px 60px;
+  }
+  
+  /* 奢华金属纹理 */
+  .luxury-metal-texture {
+    background:
+      radial-gradient(circle at 20% 80%, rgba(212, 175, 55, 0.03) 0%, transparent 50%),
+      radial-gradient(circle at 80% 20%, rgba(232, 180, 184, 0.03) 0%, transparent 50%),
+      radial-gradient(circle at 40% 40%, rgba(229, 228, 226, 0.02) 0%, transparent 50%);
+  }
+  
+  /* 奢华头部样式 */
+  .luxury-header {
+    background: var(--luxury-glass);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--luxury-gold);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3), 0 1px 0 rgba(212, 175, 55, 0.1);
+  }
+  
+  /* 奢华Logo容器 */
+  .luxury-logo-container {
+    background: linear-gradient(145deg, var(--luxury-gold), var(--rose-gold));
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .luxury-logo-container::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    transition: left 0.6s;
+  }
+  
+  .luxury-logo-container:hover::before {
+    left: 100%;
+  }
+  
+  /* 奢华统计项 */
+  .luxury-stat-item {
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem;
+    background: rgba(212, 175, 55, 0.05);
+    border: 1px solid rgba(212, 175, 55, 0.1);
+    transition: all 0.3s ease;
+  }
+  
+  .luxury-stat-item:hover {
+    background: rgba(212, 175, 55, 0.1);
+    border-color: var(--luxury-gold);
+    transform: translateY(-1px);
+  }
+  
+  /* 奢华设置按钮 */
+  .luxury-settings-button {
+    background: rgba(212, 175, 55, 0.05);
+    border: 1px solid rgba(212, 175, 55, 0.1);
+    border-radius: 50%;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .luxury-settings-button:hover {
+    background: rgba(212, 175, 55, 0.1);
+    border-color: var(--luxury-gold);
+    box-shadow: 0 4px 12px rgba(212, 175, 55, 0.2);
   }
   
   /* 页面切换动画 */
@@ -155,23 +216,36 @@ onMounted(() => {
   
   /* 响应式设计 */
   @media (max-width: 768px) {
-    .app-container h1 {
+    .luxury-theme h1 {
       font-size: 1.125rem;
+    }
+    
+    .luxury-stat-item {
+      padding: 0.25rem 0.5rem;
+      font-size: 0.75rem;
     }
   }
   
   /* 高对比度模式支持 */
   @media (prefers-contrast: high) {
-    .glass-effect {
-      background: rgba(255, 255, 255, 0.1);
-      border: 2px solid #ffffff;
+    .luxury-header {
+      background: rgba(0, 0, 0, 0.9);
+      border: 2px solid var(--luxury-gold);
+    }
+    
+    .luxury-stat-item {
+      background: rgba(212, 175, 55, 0.2);
+      border: 1px solid var(--luxury-gold);
     }
   }
   
   /* 减少动画偏好支持 */
   @media (prefers-reduced-motion: reduce) {
-    .app-container,
-    .glass-effect {
+    .luxury-theme,
+    .luxury-header,
+    .luxury-logo-container,
+    .luxury-stat-item,
+    .luxury-settings-button {
       animation: none;
       transition: none;
     }
@@ -184,7 +258,7 @@ onMounted(() => {
   </style>
   
   <style>
-  /* 全局样式重置和增强 */
+  /* 奢华全局样式重置和增强 */
   * {
     box-sizing: border-box;
   }
@@ -196,77 +270,117 @@ onMounted(() => {
   
   body {
     margin: 0;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+    font-family: var(--font-sans-luxury);
     font-size: 14px;
-    line-height: 1.5;
-    color: #ffffff;
-    background-color: #0a0a0a;
+    line-height: 1.6;
+    color: var(--text-primary);
+    background-color: var(--jet-black);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     height: 100%;
     overflow: hidden;
   }
   
-  /* 自定义滚动条 */
+  /* 奢华自定义滚动条 */
   ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+    width: 10px;
+    height: 10px;
   }
   
   ::-webkit-scrollbar-track {
-    background: #1a1a1a;
-    border-radius: 4px;
+    background: var(--charcoal);
+    border-radius: 5px;
+    border: 1px solid rgba(212, 175, 55, 0.1);
   }
   
   ::-webkit-scrollbar-thumb {
-    background: #334155;
-    border-radius: 4px;
-    transition: background 0.2s ease;
+    background: linear-gradient(145deg, var(--luxury-gold), var(--rose-gold));
+    border-radius: 5px;
+    transition: all 0.3s ease;
+    border: 1px solid rgba(212, 175, 55, 0.2);
   }
   
   ::-webkit-scrollbar-thumb:hover {
-    background: #64748b;
+    background: linear-gradient(145deg, var(--rose-gold), var(--bronze-gold));
+    box-shadow: 0 2px 8px rgba(212, 175, 55, 0.3);
   }
   
-  /* Firefox 滚动条 */
+  /* Firefox 奢华滚动条 */
   * {
     scrollbar-width: thin;
-    scrollbar-color: #334155 #1a1a1a;
+    scrollbar-color: var(--luxury-gold) var(--charcoal);
   }
   
-  /* 选择文本样式 */
+  /* 奢华选择文本样式 */
   ::selection {
-    background: #00d4ff;
-    color: #0a0a0a;
+    background: var(--luxury-gold);
+    color: var(--jet-black);
+    text-shadow: none;
   }
   
   ::-moz-selection {
-    background: #00d4ff;
-    color: #0a0a0a;
+    background: var(--luxury-gold);
+    color: var(--jet-black);
+    text-shadow: none;
   }
   
-  /* 焦点样式 */
+  /* 奢华焦点样式 */
   :focus-visible {
-    outline: 2px solid #00d4ff;
+    outline: 2px solid var(--luxury-gold);
     outline-offset: 2px;
+    box-shadow: 0 0 0 4px rgba(212, 175, 55, 0.2);
   }
   
-  /* 终端输出自定义滚动条 */
+  /* 奢华终端输出滚动条 */
   #terminal-output::-webkit-scrollbar {
-    width: 8px;
+    width: 10px;
   }
   
   #terminal-output::-webkit-scrollbar-track {
-    background: #1a1a1a;
-    border-radius: 4px;
+    background: var(--charcoal);
+    border-radius: 5px;
+    border: 1px solid rgba(212, 175, 55, 0.1);
   }
   
   #terminal-output::-webkit-scrollbar-thumb {
-    background: #64748b;
-    border-radius: 4px;
+    background: linear-gradient(145deg, var(--luxury-gold), var(--rose-gold));
+    border-radius: 5px;
+    border: 1px solid rgba(212, 175, 55, 0.2);
   }
   
   #terminal-output::-webkit-scrollbar-thumb:hover {
-    background: #94a3b8;
+    background: linear-gradient(145deg, var(--rose-gold), var(--bronze-gold));
+    box-shadow: 0 2px 8px rgba(212, 175, 55, 0.3);
+  }
+  
+  /* 奢华全局按钮样式增强 */
+  .p-button {
+    border-radius: 0.5rem !important;
+    font-weight: 500 !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  }
+  
+  .p-button:hover {
+    transform: translateY(-1px) !important;
+  }
+  
+  /* 奢华输入框样式增强 */
+  .p-inputtext {
+    border-radius: 0.5rem !important;
+    transition: all 0.3s ease !important;
+  }
+  
+  .p-inputtext:focus {
+    box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.2) !important;
+  }
+  
+  /* 奢华卡片样式增强 */
+  .p-card {
+    border-radius: 1rem !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  }
+  
+  .p-card:hover {
+    transform: translateY(-2px) !important;
   }
   </style>

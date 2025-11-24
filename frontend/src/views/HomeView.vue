@@ -360,40 +360,40 @@ watch(terminals, (newTerminals) => {
 </script>
 
 <template>
-  <div class="h-screen bg-jet-black flex flex-col overflow-hidden">
+  <div class="h-screen luxury-home-container flex flex-col overflow-hidden">
     <Toast />
     
-    <!-- Loading state / 加载状态 -->
+    <!-- Luxury loading state / 奢华加载状态 -->
     <div v-if="isLoading" class="flex-1 flex items-center justify-center">
-      <div class="text-center animate-fade-in">
-        <div class="text-4xl text-neon-blue mb-4">
-          <i class="pi pi-spin pi-spinner"></i>
+      <div class="text-center animate-luxury-fade-in">
+        <div class="text-4xl text-luxury-gold mb-4 animate-luxury-spin">
+          <i class="pi pi-spinner"></i>
         </div>
-        <p class="text-text-secondary text-lg">{{ t('common.loading') }}</p>
+        <p class="text-text-secondary text-lg font-serif-luxury">{{ t('common.loading') }}</p>
       </div>
     </div>
 
-    <!-- Main workspace / 主工作区 - 全屏终端布局 -->
+    <!-- Luxury main workspace / 奢华主工作区 - 全屏终端布局 -->
     <div v-else class="flex-1 flex overflow-hidden">
-      <!-- Left sidebar with terminal tabs / 左侧边栏带终端标签 -->
-      <aside class="w-80 bg-charcoal border-r border-border-dark flex flex-col flex-shrink-0">
-        <div class="p-4 border-b border-border-dark bg-onyx">
+      <!-- Luxury left sidebar with terminal tabs / 奢华左侧边栏带终端标签 -->
+      <aside class="w-80 luxury-sidebar flex flex-col flex-shrink-0">
+        <div class="luxury-sidebar-header">
           <div class="flex items-center justify-between">
             <div class="flex items-center space-x-2">
-              <i class="pi pi-terminal text-neon-blue"></i>
-              <span class="font-semibold text-text-primary">{{ t('home.terminals') }}</span>
-              <Badge :value="stats.total" severity="info" class="text-xs" />
+              <i class="pi pi-terminal text-luxury-gold luxury-icon"></i>
+              <span class="font-semibold text-text-primary font-serif-luxury">{{ t('home.terminals') }}</span>
+              <Badge :value="stats.total" severity="info" class="luxury-badge" />
             </div>
           </div>
         </div>
 
-        <!-- Terminal tabs / 终端标签 -->
-        <div class="flex-1 overflow-y-auto p-2">
-          <div v-if="terminals.length === 0" class="flex flex-col items-center justify-center h-full text-center p-8">
-            <div class="text-5xl text-text-muted mb-4">
+        <!-- Luxury terminal tabs / 奢华终端标签 -->
+        <div class="flex-1 overflow-y-auto p-2 luxury-terminal-list">
+          <div v-if="terminals.length === 0" class="luxury-empty-state">
+            <div class="text-5xl text-platinum mb-4">
               <i class="pi pi-inbox"></i>
             </div>
-            <p class="text-text-secondary mb-2">{{ t('home.noTerminals') }}</p>
+            <p class="text-text-secondary mb-2 font-serif-luxury">{{ t('home.noTerminals') }}</p>
             <p class="text-text-muted text-sm">请使用CTI工具创建终端</p>
           </div>
           
@@ -401,31 +401,31 @@ watch(terminals, (newTerminals) => {
             <div
               v-for="terminal in terminals"
               :key="terminal.id"
-              :class="['p-3 rounded-lg border cursor-pointer transition-all duration-200',
-                       { 'bg-slate-darker border-neon-blue shadow-neon-blue': terminal.id === activeTerminalId,
-                         'bg-onyx border-border-dark hover:bg-slate-dark hover:border-border-medium': terminal.id !== activeTerminalId }]"
+              :class="['luxury-terminal-item cursor-pointer transition-all duration-300',
+                       { 'luxury-terminal-active': terminal.id === activeTerminalId,
+                         'luxury-terminal-inactive': terminal.id !== activeTerminalId }]"
               @click="switchTerminal(terminal.id)"
             >
               <div class="flex flex-col space-y-2">
                 <div class="flex justify-between items-center">
                   <div class="flex items-center space-x-2">
-                    <span class="font-mono text-sm font-semibold text-text-primary bg-slate-dark px-2 py-1 rounded">
+                    <span class="luxury-terminal-id">
                       {{ terminal.id || 'N/A' }}
                     </span>
                     <Badge
                       :severity="getStatusSeverity(terminal.status)"
                       :value="terminal.status"
-                      class="text-xs"
+                      class="luxury-status-badge"
                     />
                   </div>
-                  <div class="flex space-x-1 opacity-0 hover:opacity-100 transition-opacity">
+                  <div class="flex space-x-1 luxury-terminal-actions">
                     <Button
                       icon="pi pi-trash"
                       v-tooltip="t('terminal.clear')"
                       severity="secondary"
                       size="small"
                       text
-                      class="w-6 h-6 text-text-muted hover:text-text-primary"
+                      class="luxury-action-button"
                       @click.stop="clearTerminal(terminal.id)"
                     />
                     <Button
@@ -434,7 +434,7 @@ watch(terminals, (newTerminals) => {
                       severity="secondary"
                       size="small"
                       text
-                      class="w-6 h-6 text-text-muted hover:text-text-primary"
+                      class="luxury-action-button"
                       @click.stop="reconnectTerminal(terminal.id)"
                     />
                     <Button
@@ -443,25 +443,25 @@ watch(terminals, (newTerminals) => {
                       severity="danger"
                       size="small"
                       text
-                      class="w-6 h-6 text-text-muted hover:text-red-500"
+                      class="luxury-action-button-danger"
                       @click.stop="deleteTerminal(terminal.id)"
                     />
                   </div>
                 </div>
                 <div class="space-y-1">
-                  <div class="flex items-center space-x-2 text-xs text-text-tertiary">
-                    <i class="pi pi-cog w-3"></i>
+                  <div class="flex items-center space-x-2 text-xs luxury-terminal-info">
+                    <i class="pi pi-cog w-3 text-luxury-gold"></i>
                     <span class="text-text-muted">PID:</span>
                     <span class="text-text-secondary">{{ terminal.pid }}</span>
                   </div>
-                  <div class="flex items-center space-x-2 text-xs text-text-tertiary">
-                    <i class="pi pi-folder w-3"></i>
+                  <div class="flex items-center space-x-2 text-xs luxury-terminal-info">
+                    <i class="pi pi-folder w-3 text-rose-gold"></i>
                     <span class="text-text-secondary truncate" :title="terminal.cwd">
                       {{ terminal.cwd || t('home.default') }}
                     </span>
                   </div>
-                  <div class="flex items-center space-x-2 text-xs text-text-tertiary">
-                    <i class="pi pi-clock w-3"></i>
+                  <div class="flex items-center space-x-2 text-xs luxury-terminal-info">
+                    <i class="pi pi-clock w-3 text-platinum"></i>
                     <span class="text-text-secondary">{{ formatDate(terminal.created) }}</span>
                   </div>
                 </div>
@@ -471,31 +471,31 @@ watch(terminals, (newTerminals) => {
         </div>
       </aside>
 
-      <!-- Right main content area / 右侧主内容区域 - 全屏终端 -->
-      <main class="flex-1 flex flex-col bg-jet-black overflow-hidden">
+      <!-- Luxury right main content area / 奢华右侧主内容区域 - 全屏终端 -->
+      <main class="flex-1 flex flex-col luxury-main-content overflow-hidden">
         <div v-if="!activeTerminalId" class="flex-1 flex items-center justify-center">
-          <div class="text-center animate-fade-in">
-            <div class="text-6xl text-text-muted mb-6">
+          <div class="text-center animate-luxury-fade-in">
+            <div class="text-6xl text-platinum mb-6 animate-luxury-pulse">
               <i class="pi pi-desktop"></i>
             </div>
-            <h3 class="text-2xl font-bold text-text-primary mb-3">{{ t('home.noTerminalSelected') }}</h3>
-            <p class="text-text-secondary max-w-md">
+            <h3 class="text-2xl font-bold text-text-primary mb-3 font-serif-luxury">{{ t('home.noTerminalSelected') }}</h3>
+            <p class="text-text-secondary max-w-md font-serif-luxury">
               {{ t('home.selectTerminalFromSidebar') }}
             </p>
           </div>
         </div>
 
         <div v-else class="flex-1 flex flex-col overflow-hidden">
-          <!-- Terminal header / 终端头部 -->
-          <header class="glass-effect border-b border-border-dark px-4 py-3 flex items-center justify-between">
+          <!-- Luxury terminal header / 奢华终端头部 -->
+          <header class="luxury-terminal-header">
             <div class="flex items-center space-x-3">
               <div class="flex items-center space-x-2">
-                <i :class="[getStatusIcon(activeTerminal?.status), 'text-lg']"></i>
-                <span class="font-semibold text-text-primary">{{ activeTerminal?.id || 'Terminal ' + (activeTerminalId || 'N/A') }}</span>
+                <i :class="[getStatusIcon(activeTerminal?.status), 'text-lg luxury-status-icon']"></i>
+                <span class="font-semibold text-text-primary font-serif-luxury">{{ activeTerminal?.id || 'Terminal ' + (activeTerminalId || 'N/A') }}</span>
                 <Badge
                   :severity="getStatusSeverity(activeTerminal?.status)"
                   :value="activeTerminal?.status"
-                  class="text-xs"
+                  class="luxury-status-badge"
                 />
               </div>
             </div>
@@ -506,7 +506,7 @@ watch(terminals, (newTerminals) => {
                 v-tooltip="t('terminal.clear')"
                 severity="secondary"
                 size="small"
-                class="w-8 h-8 text-text-secondary hover:text-neon-blue"
+                class="luxury-header-button"
                 @click="clearTerminal(activeTerminalId!)"
               />
               <Button
@@ -514,7 +514,7 @@ watch(terminals, (newTerminals) => {
                 v-tooltip="t('terminal.reconnect')"
                 severity="secondary"
                 size="small"
-                class="w-8 h-8 text-text-secondary hover:text-neon-blue"
+                class="luxury-header-button"
                 @click="reconnectTerminal(activeTerminalId!)"
               />
               <Button
@@ -522,17 +522,17 @@ watch(terminals, (newTerminals) => {
                 v-tooltip="t('home.terminate')"
                 severity="danger"
                 size="small"
-                class="w-8 h-8 text-text-secondary hover:text-red-500"
+                class="luxury-header-button-danger"
                 @click="deleteTerminal(activeTerminalId!)"
               />
             </div>
           </header>
 
-          <!-- Terminal content / 终端内容 - 占满剩余空间 -->
-          <div class="flex-1 bg-jet-black overflow-hidden">
+          <!-- Luxury terminal content / 奢华终端内容 - 占满剩余空间 -->
+          <div class="flex-1 luxury-terminal-container overflow-hidden">
             <div
               :id="`terminal-${activeTerminalId}`"
-              class="w-full h-full bg-jet-black rounded-lg"
+              class="w-full h-full luxury-terminal-viewport"
             ></div>
           </div>
         </div>
@@ -542,22 +542,280 @@ watch(terminals, (newTerminals) => {
 </template>
 
 <style scoped>
-/* xterm.js 样式优化 / xterm.js styles optimization */
+/* Luxury home container / 奢华主容器 */
+.luxury-home-container {
+  background: linear-gradient(135deg, var(--jet-black) 0%, var(--charcoal) 40%, var(--onyx) 70%, var(--graphite) 100%);
+}
+
+/* Luxury sidebar / 奢华侧边栏 */
+.luxury-sidebar {
+  background: var(--luxury-glass);
+  backdrop-filter: blur(20px);
+  border-right: 1px solid var(--luxury-gold);
+  box-shadow: 4px 0 20px rgba(0, 0, 0, 0.3), inset -1px 0 0 rgba(212, 175, 55, 0.1);
+}
+
+.luxury-sidebar-header {
+  padding: 1rem;
+  border-bottom: 1px solid var(--luxury-gold);
+  background: linear-gradient(145deg, rgba(212, 175, 55, 0.05), rgba(232, 180, 184, 0.05));
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+
+.luxury-icon {
+  font-size: 1.25rem;
+  text-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
+}
+
+.luxury-badge {
+  background: rgba(212, 175, 55, 0.1) !important;
+  border: 1px solid var(--luxury-gold) !important;
+  color: var(--luxury-gold) !important;
+  font-weight: 600 !important;
+}
+
+/* Luxury terminal list / 奢华终端列表 */
+.luxury-terminal-list {
+  padding: 0.5rem;
+}
+
+.luxury-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  text-align: center;
+  padding: 2rem;
+}
+
+.luxury-terminal-item {
+  padding: 0.75rem;
+  border-radius: 0.75rem;
+  border: 1px solid;
+  margin-bottom: 0.5rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.luxury-terminal-active {
+  background: var(--luxury-glass);
+  border-color: var(--luxury-gold);
+  box-shadow: 0 4px 20px rgba(212, 175, 55, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.luxury-terminal-active::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--luxury-gold), var(--rose-gold), var(--platinum));
+  animation: luxury-shimmer 3s ease-in-out infinite;
+}
+
+.luxury-terminal-inactive {
+  background: rgba(26, 26, 26, 0.6);
+  border-color: rgba(212, 175, 55, 0.2);
+  transition: all 0.3s ease;
+}
+
+.luxury-terminal-inactive:hover {
+  background: rgba(212, 175, 55, 0.05);
+  border-color: var(--luxury-gold);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 10px rgba(212, 175, 55, 0.2);
+}
+
+.luxury-terminal-id {
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  background: rgba(212, 175, 55, 0.1);
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.375rem;
+  border: 1px solid rgba(212, 175, 55, 0.2);
+}
+
+.luxury-status-badge {
+  font-size: 0.75rem !important;
+  font-weight: 500 !important;
+  border-radius: 0.375rem !important;
+  border: 1px solid !important;
+}
+
+.luxury-terminal-actions {
+  display: flex;
+  gap: 0.25rem;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.luxury-terminal-item:hover .luxury-terminal-actions {
+  opacity: 1;
+}
+
+.luxury-action-button {
+  width: 1.5rem !important;
+  height: 1.5rem !important;
+  background: rgba(212, 175, 55, 0.05) !important;
+  border: 1px solid rgba(212, 175, 55, 0.2) !important;
+  color: var(--luxury-gold) !important;
+  border-radius: 0.375rem !important;
+  transition: all 0.2s ease !important;
+}
+
+.luxury-action-button:hover {
+  background: rgba(212, 175, 55, 0.1) !important;
+  border-color: var(--luxury-gold) !important;
+  transform: scale(1.1) !important;
+}
+
+.luxury-action-button-danger {
+  width: 1.5rem !important;
+  height: 1.5rem !important;
+  background: rgba(239, 68, 68, 0.05) !important;
+  border: 1px solid rgba(239, 68, 68, 0.2) !important;
+  color: #ef4444 !important;
+  border-radius: 0.375rem !important;
+  transition: all 0.2s ease !important;
+}
+
+.luxury-action-button-danger:hover {
+  background: rgba(239, 68, 68, 0.1) !important;
+  border-color: #ef4444 !important;
+  transform: scale(1.1) !important;
+}
+
+.luxury-terminal-info {
+  color: var(--text-tertiary);
+  transition: color 0.2s ease;
+}
+
+.luxury-terminal-info:hover {
+  color: var(--text-secondary);
+}
+
+/* Luxury main content / 奢华主内容 */
+.luxury-main-content {
+  background: var(--jet-black);
+  position: relative;
+}
+
+.luxury-main-content::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background:
+    radial-gradient(circle at 20% 80%, rgba(212, 175, 55, 0.02) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(232, 180, 184, 0.02) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+/* Luxury terminal header / 奢华终端头部 */
+.luxury-terminal-header {
+  padding: 0.75rem 1rem;
+  background: var(--luxury-glass);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--luxury-gold);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 2px 20px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.luxury-status-icon {
+  text-shadow: 0 0 10px currentColor;
+}
+
+.luxury-header-button {
+  width: 2rem !important;
+  height: 2rem !important;
+  background: rgba(212, 175, 55, 0.05) !important;
+  border: 1px solid rgba(212, 175, 55, 0.2) !important;
+  color: var(--luxury-gold) !important;
+  border-radius: 0.5rem !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.luxury-header-button:hover {
+  background: rgba(212, 175, 55, 0.1) !important;
+  border-color: var(--luxury-gold) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(212, 175, 55, 0.3) !important;
+}
+
+.luxury-header-button-danger {
+  width: 2rem !important;
+  height: 2rem !important;
+  background: rgba(239, 68, 68, 0.05) !important;
+  border: 1px solid rgba(239, 68, 68, 0.2) !important;
+  color: #ef4444 !important;
+  border-radius: 0.5rem !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.luxury-header-button-danger:hover {
+  background: rgba(239, 68, 68, 0.1) !important;
+  border-color: #ef4444 !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3) !important;
+}
+
+/* Luxury terminal container / 奢华终端容器 */
+.luxury-terminal-container {
+  background: var(--jet-black);
+  border: 1px solid rgba(212, 175, 55, 0.1);
+  position: relative;
+}
+
+.luxury-terminal-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--luxury-gold), transparent);
+  opacity: 0.3;
+}
+
+.luxury-terminal-viewport {
+  background: var(--jet-black) !important;
+  border-radius: 0.75rem !important;
+  border: 1px solid rgba(212, 175, 55, 0.1) !important;
+  box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.5) !important;
+}
+
+/* Luxury xterm.js styles / 奢华xterm.js样式 */
 :deep(.xterm) {
   height: 100% !important;
-  background: #0a0a0a !important;
-  border-radius: 0.5rem !important;
+  background: var(--jet-black) !important;
+  border-radius: 0.75rem !important;
+  font-family: 'JetBrains Mono', 'Consolas', 'Courier New', monospace !important;
 }
 
 :deep(.xterm-viewport) {
-  background: #0a0a0a !important;
+  background: var(--jet-black) !important;
+  border-radius: 0.75rem !important;
 }
 
 :deep(.xterm-screen) {
-  background: #0a0a0a !important;
+  background: var(--jet-black) !important;
+  border-radius: 0.75rem !important;
 }
 
-/* 隐藏 xterm.js 辅助元素 / Hide xterm.js helper elements */
+:deep(.xterm-selection) {
+  background: var(--luxury-gold) !important;
+  opacity: 0.3 !important;
+}
+
+/* Hide xterm.js helper elements / 隐藏xterm.js辅助元素 */
 :deep(.xterm-helper-textarea),
 :deep(.xterm-char-measure-element) {
   position: absolute !important;
@@ -576,10 +834,59 @@ watch(terminals, (newTerminals) => {
   clip: rect(0, 0, 0, 0) !important;
 }
 
-/* 响应式设计 / Responsive design */
+/* Luxury animations / 奢华动画 */
+@keyframes luxury-shimmer {
+  0%, 100% {
+    transform: translateX(-100%);
+  }
+  50% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes luxury-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes luxury-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes luxury-pulse {
+  0%, 100% {
+    opacity: 0.8;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+}
+
+/* Responsive design / 响应式设计 */
 @media (max-width: 768px) {
-  .w-80 {
+  .luxury-sidebar {
     width: 16rem;
+  }
+  
+  .luxury-terminal-header {
+    padding: 0.5rem 0.75rem;
+  }
+  
+  .luxury-terminal-id {
+    font-size: 0.75rem;
   }
 }
 </style>

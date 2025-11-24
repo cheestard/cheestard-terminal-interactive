@@ -26,7 +26,23 @@ app.use(createPinia())
 app.use(router)
 app.use(i18n)
 app.use(PrimeVue, {
-  unstyled: true
+  // 使用 styled 模式以获得默认样式支持 / Use styled mode for default style support
+  unstyled: false,
+  // 配置 PassThrough 以支持 Tailwind CSS / Configure PassThrough for Tailwind CSS support
+  pt: {
+    // 卡片组件的 PassThrough 配置 / Card component PassThrough configuration
+    card: {
+      root: 'glass-effect p-card'
+    },
+    // 输入框组件的 PassThrough 配置 / Input component PassThrough configuration
+    inputtext: {
+      root: 'p-inputtext'
+    },
+    // 按钮组件的 PassThrough 配置 / Button component PassThrough configuration
+    button: {
+      root: 'p-button'
+    }
+  }
 })
 app.use(ToastService)
 app.directive('tooltip', Tooltip)

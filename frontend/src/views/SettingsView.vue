@@ -176,13 +176,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="settings-page min-h-screen bg-gradient-dark text-text-primary relative overflow-y-auto">
-    <!-- 背景装饰元素 / Background decorative elements -->
-    <div class="fixed inset-0 pointer-events-none overflow-hidden">
-      <div class="absolute top-0 right-0 w-96 h-96 bg-neon-blue opacity-10 rounded-full filter blur-3xl animate-float"></div>
-      <div class="absolute bottom-0 left-0 w-80 h-80 bg-neon-purple opacity-10 rounded-full filter blur-3xl animate-float" style="animation-delay: 2s;"></div>
-      <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-neon-green opacity-5 rounded-full filter blur-3xl animate-float" style="animation-delay: 4s;"></div>
-    </div>
+  <div class="settings-page min-h-screen bg-jet-black text-text-primary relative overflow-y-auto luxury-settings-container">
     <Toast />
     <ConfirmationDialog
       :visible="showResetDialog"
@@ -193,8 +187,8 @@ onMounted(async () => {
       @reject="rejectReset"
     />
     
-    <!-- 页面头部 / Page header -->
-    <div class="glass-effect border-b border-border-dark sticky top-0 z-10 animate-slide-up">
+    <!-- 奢华页面头部 / Luxury page header -->
+    <div class="luxury-header sticky top-0 z-10 animate-slide-up">
       <div class="max-w-6xl mx-auto px-6 py-4">
         <div class="flex items-center justify-between">
           <div class="flex items-center space-x-4">
@@ -203,19 +197,19 @@ onMounted(async () => {
               :label="t('settings.backToHome')"
               text
               severity="secondary"
-              class="text-text-secondary hover:text-neon-blue hover:bg-bg-glass-hover transition-all duration-200 hover:shadow-neon-blue"
+              class="text-text-secondary hover:text-luxury-gold hover:bg-luxury-glass transition-all duration-200 hover:shadow-luxury luxury-back-button"
               @click="goBack"
             />
-            <h1 class="text-2xl font-bold bg-gradient-neon bg-clip-text text-transparent">{{ t('settings.title') }}</h1>
+            <h1 class="text-2xl font-bold font-serif-luxury bg-gradient-luxury bg-clip-text text-transparent">{{ t('settings.title') }}</h1>
           </div>
           
-          <!-- 操作按钮 / Action buttons -->
+          <!-- 奢华操作按钮 / Luxury action buttons -->
           <div class="flex items-center space-x-3">
             <Button
               :label="t('settings.reset')"
               icon="pi pi-refresh"
               severity="secondary"
-              class="text-text-secondary hover:text-neon-blue hover:bg-bg-glass-hover transition-all duration-200 hover:shadow-neon-blue"
+              class="text-text-secondary hover:text-rose-gold hover:bg-rose-gold-glass transition-all duration-200 hover:shadow-luxury luxury-reset-button"
               @click="confirmReset"
               :disabled="isLoading"
             />
@@ -223,7 +217,7 @@ onMounted(async () => {
               :label="t('settings.save')"
               icon="pi pi-save"
               severity="primary"
-              class="bg-neon-blue hover:bg-neon-purple text-jet-black font-semibold transition-all duration-200 hover:shadow-neon-blue hover:scale-105"
+              class="bg-luxury-gold hover:bg-rose-gold text-jet-black font-semibold transition-all duration-200 hover:shadow-luxury hover:scale-105 luxury-save-button"
               @click="saveConfiguration"
               :disabled="!hasChanges || isLoading"
               :loading="isLoading"
@@ -234,28 +228,28 @@ onMounted(async () => {
     </div>
 
     <!-- 设置内容 / Settings content -->
-    <div class="max-w-6xl mx-auto px-6 py-8" v-if="!isLoading">
-      <div class="space-y-6">
-        <!-- 应用配置 / Application configuration -->
-        <Card class="glass-effect border border-border-dark hover:shadow-glass hover:border-neon-blue transition-all duration-300 animate-fade-in group">
+    <div class="max-w-5xl mx-auto px-8 py-10" v-if="!isLoading">
+      <div class="space-y-8">
+        <!-- 奢华应用配置 / Luxury application configuration -->
+        <Card class="luxury-card border border-luxury-gold hover:shadow-luxury hover:border-rose-gold transition-all duration-300 animate-fade-in group">
           <template #title>
             <div class="flex items-center space-x-2">
-              <i class="pi pi-cog text-neon-blue"></i>
-              <span class="text-text-primary font-semibold">{{ t('settings.appConfig') }}</span>
+              <i class="pi pi-cog text-luxury-gold"></i>
+              <span class="text-text-primary font-semibold font-serif-luxury">{{ t('settings.appConfig') }}</span>
             </div>
           </template>
           <template #content>
             <div class="space-y-6">
               <div class="flex flex-col space-y-2">
                 <label class="flex items-center space-x-2 text-text-primary font-medium">
-                  <i class="pi pi-language text-neon-blue"></i>
-                  <span>{{ t('settings.language') }}</span>
+                  <i class="pi pi-language text-luxury-gold"></i>
+                  <span class="font-serif-luxury">{{ t('settings.language') }}</span>
                 </label>
                 <div class="space-y-3">
                   <div
                     v-for="option in languageOptions"
                     :key="option.value"
-                    class="flex items-center space-x-3 p-3 rounded-lg bg-charcoal border border-border-dark hover:bg-slate-dark transition-colors duration-200"
+                    class="flex items-center space-x-3 p-3 rounded-lg bg-charcoal border border-luxury-gold hover:bg-luxury-glass transition-colors duration-200 luxury-language-option"
                   >
                     <RadioButton
                       v-model="selectedLanguage"
@@ -272,38 +266,38 @@ onMounted(async () => {
           </template>
         </Card>
 
-        <!-- 服务器配置 / Server configuration -->
-        <Card class="glass-effect border border-border-dark hover:shadow-glass hover:border-neon-purple transition-all duration-300 animate-fade-in group">
+        <!-- 奢华服务器配置 / Luxury server configuration -->
+        <Card class="luxury-card border border-rose-gold hover:shadow-luxury hover:border-luxury-gold transition-all duration-300 animate-fade-in group">
           <template #title>
             <div class="flex items-center space-x-2">
-              <i class="pi pi-server text-neon-purple"></i>
-              <span class="text-text-primary font-semibold">{{ t('settings.serverConfig') }}</span>
+              <i class="pi pi-server text-rose-gold"></i>
+              <span class="text-text-primary font-semibold font-serif-luxury">{{ t('settings.serverConfig') }}</span>
             </div>
           </template>
           <template #content>
             <div class="space-y-6">
               <div class="flex flex-col space-y-2">
                 <label for="host" class="flex items-center space-x-2 text-text-primary font-medium">
-                  <i class="pi pi-globe text-neon-purple"></i>
-                  <span>{{ t('settings.host') }}</span>
+                  <i class="pi pi-globe text-rose-gold"></i>
+                  <span class="font-serif-luxury">{{ t('settings.host') }}</span>
                 </label>
                 <InputText
                   id="host"
                   v-model="configData.server.host"
-                  class="w-full max-w-md bg-charcoal border-border-dark text-text-primary focus:border-neon-purple"
+                  class="w-full max-w-md bg-charcoal border-rose-gold text-text-primary focus:border-luxury-gold luxury-input"
                   placeholder="127.0.0.1"
                 />
               </div>
               
               <div class="flex flex-col space-y-2">
                 <label for="port" class="flex items-center space-x-2 text-text-primary font-medium">
-                  <i class="pi pi-key text-neon-purple"></i>
-                  <span>{{ t('settings.port') }}</span>
+                  <i class="pi pi-key text-rose-gold"></i>
+                  <span class="font-serif-luxury">{{ t('settings.port') }}</span>
                 </label>
                 <InputNumber
                   id="port"
                   v-model="configData.server.port"
-                  class="w-full max-w-md bg-charcoal border-border-dark text-text-primary focus:border-neon-purple"
+                  class="w-full max-w-md bg-charcoal border-rose-gold text-text-primary focus:border-luxury-gold luxury-input"
                   :min="1"
                   :max="65535"
                 />
@@ -311,8 +305,8 @@ onMounted(async () => {
               
               <div class="flex flex-col space-y-2">
                 <label class="flex items-center space-x-2 text-text-primary font-medium">
-                  <i class="pi pi-shield text-neon-purple"></i>
-                  <span>{{ t('settings.corsOrigin') }}</span>
+                  <i class="pi pi-shield text-rose-gold"></i>
+                  <span class="font-serif-luxury">{{ t('settings.corsOrigin') }}</span>
                 </label>
                 <div class="space-y-2">
                   <div
@@ -322,7 +316,7 @@ onMounted(async () => {
                   >
                     <InputText
                       v-model="configData.server.cors.origin[index]"
-                      class="flex-1 bg-charcoal border-border-dark text-text-primary focus:border-neon-purple"
+                      class="flex-1 bg-charcoal border-rose-gold text-text-primary focus:border-luxury-gold luxury-input"
                       placeholder="http://localhost:1107"
                     />
                     <Button
@@ -339,7 +333,7 @@ onMounted(async () => {
                     :label="t('common.create')"
                     severity="secondary"
                     size="small"
-                    class="text-neon-purple hover:bg-slate-dark"
+                    class="text-rose-gold hover:bg-luxury-glass luxury-add-button"
                     @click="configData.server.cors.origin.push('')"
                   />
                 </div>
@@ -364,12 +358,12 @@ onMounted(async () => {
           </template>
         </Card>
 
-        <!-- 终端配置 / Terminal configuration -->
-        <Card class="glass-effect border border-border-dark hover:shadow-glass hover:border-neon-green transition-all duration-300 animate-fade-in group">
+        <!-- 奢华终端配置 / Luxury terminal configuration -->
+        <Card class="luxury-card border border-platinum hover:shadow-luxury hover:border-luxury-gold transition-all duration-300 animate-fade-in group">
           <template #title>
             <div class="flex items-center space-x-2">
-              <i class="pi pi-desktop text-neon-green"></i>
-              <span class="text-text-primary font-semibold">{{ t('settings.terminalConfig') }}</span>
+              <i class="pi pi-desktop text-platinum"></i>
+              <span class="text-text-primary font-semibold font-serif-luxury">{{ t('settings.terminalConfig') }}</span>
             </div>
           </template>
           <template #content>
@@ -583,20 +577,105 @@ onMounted(async () => {
       </div>
     </div>
 
-    <!-- 加载状态 / Loading state -->
+    <!-- 奢华加载状态 / Luxury loading state -->
     <div v-else class="flex items-center justify-center min-h-96">
       <div class="text-center animate-fade-in">
-        <div class="text-4xl text-neon-blue mb-4">
+        <div class="text-4xl text-luxury-gold mb-4">
           <i class="pi pi-spin pi-spinner"></i>
         </div>
-        <p class="text-text-secondary text-lg">{{ t('common.loading') }}</p>
+        <p class="text-text-secondary text-lg font-serif-luxury">{{ t('common.loading') }}</p>
       </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-/* SettingsView 特有样式 / SettingsView specific styles */
+/* 奢华设置页面特有样式 / Luxury SettingsView specific styles */
+
+/* 奢华卡片样式 / Luxury card styles */
+.luxury-card {
+  background: var(--luxury-glass);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--luxury-gold);
+  border-radius: 1rem;
+  box-shadow: var(--multi-shadow);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.luxury-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--luxury-glow);
+  border-color: var(--rose-gold);
+}
+
+/* 奢华输入框样式 / Luxury input styles */
+.luxury-input {
+  background: var(--charcoal);
+  border: 1px solid var(--luxury-gold);
+  border-radius: 0.5rem;
+  color: var(--text-primary);
+  transition: all 0.3s ease;
+}
+
+.luxury-input:focus {
+  border-color: var(--luxury-gold);
+  box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.2);
+  outline: none;
+}
+
+/* 奢华按钮样式 / Luxury button styles */
+.luxury-back-button:hover {
+  color: var(--luxury-gold);
+  background: var(--luxury-glass);
+  box-shadow: var(--luxury-shadow);
+}
+
+.luxury-reset-button:hover {
+  color: var(--rose-gold);
+  background: var(--rose-gold-glass);
+  box-shadow: var(--luxury-shadow);
+}
+
+.luxury-save-button {
+  background: var(--luxury-gold);
+  color: var(--jet-black);
+  border: none;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  box-shadow: var(--luxury-shadow);
+}
+
+.luxury-save-button:hover {
+  background: var(--rose-gold);
+  transform: translateY(-2px);
+  box-shadow: var(--luxury-glow);
+}
+
+.luxury-add-button {
+  color: var(--rose-gold);
+  border-color: var(--rose-gold);
+  transition: all 0.3s ease;
+}
+
+.luxury-add-button:hover {
+  background: var(--rose-gold-glass);
+  box-shadow: var(--luxury-shadow);
+}
+
+/* 奢华语言选项样式 / Luxury language option styles */
+.luxury-language-option {
+  background: var(--charcoal);
+  border: 1px solid var(--luxury-gold);
+  border-radius: 0.5rem;
+  transition: all 0.3s ease;
+}
+
+.luxury-language-option:hover {
+  background: var(--luxury-glass);
+  border-color: var(--rose-gold);
+  box-shadow: var(--luxury-shadow);
+}
 
 /* 响应式设计 / Responsive design */
 @media (max-width: 768px) {
@@ -618,7 +697,8 @@ onMounted(async () => {
 /* 减少动画偏好支持 / Reduced motion support */
 @media (prefers-reduced-motion: reduce) {
   .animate-fade-in,
-  .animate-slide-up {
+  .animate-slide-up,
+  .animate-luxury-float {
     animation: none;
     transition: none;
   }

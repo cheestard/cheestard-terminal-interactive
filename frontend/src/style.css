@@ -2,8 +2,24 @@
 @import "tailwindcss";
 @import "tailwindcss-primeui";
 
+/* 配置 Tailwind CSS v4 内容源 / Configure Tailwind CSS v4 content sources */
+@source "./src/**/*.{vue,js,ts,jsx,tsx}";
+@source "./index.html";
+
 /* TailwindCSS v4 自定义颜色定义 / TailwindCSS v4 custom color definitions */
 @theme {
+  /* 奢华色彩系统 / Luxury Color System */
+  --color-luxury-gold: #d4af37;
+  --color-rose-gold: #e8b4b8;
+  --color-bronze-gold: #cd7f32;
+  --color-champagne-gold: #f7e7ce;
+  --color-platinum: #e5e4e2;
+  --color-stainless-silver: #71797e;
+  --color-mercury: #8b8c89;
+  --color-royal-blue: #4169e1;
+  --color-deep-ruby: #8b0000;
+  
+  /* 原有深色系保持 / Original dark colors preserved */
   --color-jet-black: #0a0a0a;
   --color-charcoal: #1a1a1a;
   --color-onyx: #2d2d2d;
@@ -25,11 +41,22 @@
   --color-bg-glass: rgba(255, 255, 255, 0.05);
   --color-bg-glass-hover: rgba(255, 255, 255, 0.1);
   
+  /* 奢华透明度 / Luxury Opacity */
+  --color-luxury-glass: rgba(212, 175, 55, 0.1);
+  --color-rose-gold-glass: rgba(232, 180, 184, 0.1);
+  --color-platinum-glass: rgba(229, 228, 226, 0.1);
+  
   /* 自定义背景渐变 / Custom background gradients */
   --background-image-gradient-dark: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #2d2d2d 100%);
   --background-image-gradient-neon: linear-gradient(135deg, #00d4ff 0%, #9333ea 50%, #00ff88 100%);
   --background-image-gradient-cyber: linear-gradient(135deg, #1e293b 0%, #334155 50%, #475569 100%);
   --background-image-glass-gradient: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+  
+  /* 奢华背景渐变 / Luxury background gradients */
+  --background-image-gradient-luxury: linear-gradient(135deg, #d4af37 0%, #b8941f 50%, #d4af37 100%);
+  --background-image-gradient-rose-gold: linear-gradient(135deg, #e8b4b8 0%, #d4a5a9 50%, #e8b4b8 100%);
+  --background-image-gradient-platinum: linear-gradient(135deg, #e5e4e2 0%, #d1d0ce 50%, #e5e4e2 100%);
+  --background-image-gradient-luxury-subtle: linear-gradient(135deg, rgba(212, 175, 55, 0.1) 0%, rgba(212, 175, 55, 0.05) 100%);
   
   /* 自定义阴影 / Custom shadows */
   --shadow-neon-blue: 0 0 20px rgba(0, 212, 255, 0.5), 0 0 40px rgba(0, 212, 255, 0.3);
@@ -39,10 +66,34 @@
   --shadow-glass: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
   --shadow-inner-dark: inset 0 2px 4px 0 rgba(0, 0, 0, 0.6);
   --shadow-cyber-grid: 0 0 10px rgba(0, 212, 255, 0.2), inset 0 0 10px rgba(0, 212, 255, 0.1);
+  
+  /* 奢华阴影 / Luxury Shadows */
+  --shadow-luxury: 0 4px 20px rgba(212, 175, 55, 0.3);
+  --shadow-luxury-glow: 0 0 30px rgba(212, 175, 55, 0.4);
+  --shadow-luxury-multi: 0 8px 32px rgba(0, 0, 0, 0.2), 0 4px 20px rgba(212, 175, 55, 0.3);
+  --shadow-rose-gold: 0 4px 20px rgba(232, 180, 184, 0.3);
+  --shadow-platinum: 0 4px 20px rgba(229, 228, 226, 0.2);
 }
 
 /* 确保CSS变量在:root选择器中也可访问 / Ensure CSS variables are accessible in :root selector */
 :root {
+  /* 奢华色彩系统 / Luxury Color System */
+  --color-luxury-gold: #d4af37;
+  --color-rose-gold: #e8b4b8;
+  --color-bronze-gold: #cd7f32;
+  --color-champagne-gold: #f7e7ce;
+  --color-platinum: #e5e4e2;
+  --color-stainless-silver: #71797e;
+  --color-mercury: #8b8c89;
+  --color-royal-blue: #4169e1;
+  --color-deep-ruby: #8b0000;
+  
+  /* 奢华透明度 / Luxury Opacity */
+  --color-luxury-glass: rgba(212, 175, 55, 0.1);
+  --color-rose-gold-glass: rgba(232, 180, 184, 0.1);
+  --color-platinum-glass: rgba(229, 228, 226, 0.1);
+  
+  /* 原有深色系保持 / Original dark colors preserved */
   --color-jet-black: #0a0a0a;
   --color-charcoal: #1a1a1a;
   --color-onyx: #2d2d2d;
@@ -150,6 +201,8 @@ html {
               inset 0 0 20px rgba(255, 255, 255, 0.05);
   transition: all 0.3s ease;
   position: relative;
+  opacity: 1 !important; /* 强制设置透明度为1 / Force opacity to 1 */
+  visibility: visible !important; /* 确保元素可见 / Ensure element is visible */
 }
 
 .glass-effect::before {
@@ -321,64 +374,267 @@ html {
 }
 
 .settings-page .p-card {
-  background: rgba(26, 26, 26, 0.8) !important;
-  border: 1px solid var(--color-border-dark) !important;
-  backdrop-filter: blur(20px) !important;
-  transition: all 0.3s ease;
+  background: rgba(26, 26, 26, 0.75) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  backdrop-filter: blur(25px) !important;
+  transition: all 0.3s ease !important;
+  margin-bottom: 2.5rem !important;
+  margin-top: 0 !important;
+  border-radius: 1.25rem !important;
+  box-shadow: 0 15px 50px rgba(0, 0, 0, 0.5),
+              0 0 30px rgba(0, 212, 255, 0.1),
+              0 0 50px rgba(147, 51, 234, 0.05),
+              inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
+  position: relative !important;
+  overflow: hidden !important;
+  opacity: 1 !important; /* 强制设置透明度为1 / Force opacity to 1 */
+  visibility: visible !important; /* 确保元素可见 / Ensure element is visible */
+}
+
+.settings-page .p-card::before {
+  content: '' !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  height: 2px !important;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(0, 212, 255, 0.3) 20%,
+    rgba(147, 51, 234, 0.3) 50%,
+    rgba(0, 255, 136, 0.3) 80%,
+    transparent 100%) !important;
+  opacity: 0 !important;
+  transition: opacity 0.3s ease !important;
+}
+
+.settings-page .p-card:hover::before {
+  opacity: 1 !important;
 }
 
 .settings-page .p-card:hover {
-  background: rgba(26, 26, 26, 0.9) !important;
-  border-color: var(--color-neon-blue) !important;
-  box-shadow: 0 8px 32px rgba(0, 212, 255, 0.2) !important;
+  background: rgba(26, 26, 26, 0.85) !important;
+  border-color: rgba(0, 212, 255, 0.5) !important;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6),
+              0 0 40px rgba(0, 212, 255, 0.2),
+              0 0 60px rgba(147, 51, 234, 0.1),
+              inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+  transform: translateY(-5px) scale(1.01) !important;
 }
 
 .settings-page .p-card .p-card-title {
   color: var(--color-text-primary) !important;
   font-weight: 600 !important;
+  font-size: 1.25rem !important;
+  padding: 1.5rem 1.5rem 0.75rem !important; /* 修复上下左右内边距，确保标题不紧贴任何边界 */
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  margin-bottom: 1rem !important;
 }
 
 .settings-page .p-card .p-card-content {
   color: var(--color-text-secondary) !important;
+  padding: 1.5rem !important;
+  padding-top: 0.5rem !important;
+  line-height: 1.6 !important;
+  opacity: 1 !important; /* 强制设置透明度为1 / Force opacity to 1 */
+  visibility: visible !important; /* 确保元素可见 / Ensure element is visible */
 }
 
-.settings-page .p-button {
+/* 设置页面表单元素间距增强 */
+.settings-page .space-y-6 > * + * {
+  margin-top: 2rem !important;
+}
+
+.settings-page .space-y-2 > * + * {
+  margin-top: 1rem !important;
+}
+
+/* 设置页面卡片容器间距增强 */
+.settings-page .space-y-8 > * + * {
+  margin-top: 2.5rem !important;
+}
+
+/* 设置页面卡片内容区域增强 */
+.settings-page .p-card .p-card-content .space-y-6 {
+  gap: 1.5rem !important;
+}
+
+/* 设置页面输入框和按钮增强 */
+.settings-page .p-inputtext,
+.settings-page .p-inputnumber input {
+  padding: 0.75rem 1rem !important;
+  font-size: 0.95rem !important;
+  border-radius: 0.5rem !important;
   transition: all 0.2s ease !important;
 }
 
+.settings-page .p-button {
+  padding: 0.625rem 1.25rem !important;
+  font-weight: 500 !important;
+  border-radius: 0.5rem !important;
+  transition: all 0.2s ease !important;
+}
+
+/* 设置页面单选按钮组增强 */
+.settings-page .flex.items-center.space-x-3.p-3 {
+  padding: 1rem !important;
+  border-radius: 0.75rem !important;
+  background: rgba(255, 255, 255, 0.03) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  transition: all 0.2s ease !important;
+}
+
+.settings-page .flex.items-center.space-x-3.p-3:hover {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border-color: rgba(0, 212, 255, 0.2) !important;
+}
+
+/* 设置页面Toggle按钮增强 */
+.settings-page .p-togglebutton {
+  padding: 0.625rem 1.25rem !important;
+  font-weight: 500 !important;
+  border-radius: 2rem !important;
+  min-width: 120px !important;
+}
+
+.settings-page .p-button {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  border-radius: 0.5rem !important;
+  font-weight: 600 !important;
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+/* 奢华主题按钮样式覆盖 / Luxury Theme Button Style Override */
 .settings-page .p-button.p-button-secondary {
   background-color: transparent !important;
-  border: 1px solid var(--color-border-dark) !important;
-  color: var(--color-text-secondary) !important;
+  border: 1px solid var(--color-luxury-gold) !important;
+  color: var(--color-luxury-gold) !important;
+  box-shadow: var(--shadow-luxury) !important;
 }
 
 .settings-page .p-button.p-button-secondary:hover {
-  background-color: var(--color-bg-glass-hover) !important;
-  border-color: var(--color-neon-blue) !important;
-  color: var(--color-neon-blue) !important;
-  box-shadow: 0 0 20px rgba(0, 212, 255, 0.3) !important;
+  background-color: var(--color-luxury-gold) !important;
+  border-color: var(--color-rose-gold) !important;
+  color: var(--color-jet-black) !important;
+  box-shadow: var(--shadow-luxury-glow) !important;
+  transform: translateY(-2px) !important;
 }
 
 .settings-page .p-button.p-button-primary {
-  background-color: var(--color-neon-blue) !important;
-  border: 1px solid var(--color-neon-blue) !important;
+  background-color: var(--color-luxury-gold) !important;
+  border: 1px solid var(--color-luxury-gold) !important;
   color: var(--color-jet-black) !important;
+  box-shadow: var(--shadow-luxury) !important;
 }
 
 .settings-page .p-button.p-button-primary:hover {
-  background-color: var(--color-neon-purple) !important;
-  border-color: var(--color-neon-purple) !important;
-  box-shadow: 0 0 20px rgba(147, 51, 234, 0.3) !important;
+  background-color: var(--color-rose-gold) !important;
+  border-color: var(--color-rose-gold) !important;
+  color: var(--color-jet-black) !important;
+  box-shadow: var(--shadow-luxury-glow) !important;
+  transform: translateY(-2px) !important;
 }
 
 .settings-page .p-button.p-button-danger {
   background-color: transparent !important;
-  border: 1px solid transparent !important;
-  color: var(--color-text-muted) !important;
+  border: 1px solid var(--color-deep-ruby) !important;
+  color: var(--color-deep-ruby) !important;
+  box-shadow: 0 4px 20px rgba(139, 0, 0, 0.3) !important;
 }
 
 .settings-page .p-button.p-button-danger:hover {
-  color: var(--color-red-500) !important;
+  background-color: var(--color-deep-ruby) !important;
+  color: var(--color-text-primary) !important;
+  box-shadow: 0 0 30px rgba(139, 0, 0, 0.4) !important;
+  transform: translateY(-2px) !important;
+}
+
+/* 按钮文本样式覆盖 / Button Text Style Override */
+.settings-page .p-button .p-button-label {
+  font-weight: 600 !important;
+  position: relative !important;
+  z-index: 1 !important;
+}
+
+/* 按钮图标样式覆盖 / Button Icon Style Override */
+.settings-page .p-button .p-button-icon {
+  position: relative !important;
+  z-index: 1 !important;
+}
+
+/* 按钮禁用状态 / Button Disabled State */
+.settings-page .p-button:disabled {
+  opacity: 0.6 !important;
+  cursor: not-allowed !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* 按钮加载状态 / Button Loading State */
+.settings-page .p-button.p-button-loading {
+  pointer-events: none !important;
+}
+
+.settings-page .p-button.p-button-loading .p-button-label {
+  opacity: 0.8 !important;
+}
+
+/* 特定按钮类样式覆盖 / Specific Button Class Style Override */
+.settings-page .luxury-back-button {
+  background-color: transparent !important;
+  border: 1px solid var(--color-luxury-gold) !important;
+  color: var(--color-luxury-gold) !important;
+}
+
+.settings-page .luxury-back-button:hover {
+  background-color: var(--color-luxury-glass) !important;
+  border-color: var(--color-rose-gold) !important;
+  color: var(--color-rose-gold) !important;
+  box-shadow: var(--shadow-luxury) !important;
+  transform: translateY(-2px) !important;
+}
+
+.settings-page .luxury-reset-button {
+  background-color: transparent !important;
+  border: 1px solid var(--color-rose-gold) !important;
+  color: var(--color-rose-gold) !important;
+}
+
+.settings-page .luxury-reset-button:hover {
+  background-color: var(--color-rose-gold-glass) !important;
+  border-color: var(--color-bronze-gold) !important;
+  color: var(--color-bronze-gold) !important;
+  box-shadow: var(--shadow-rose-gold) !important;
+  transform: translateY(-2px) !important;
+}
+
+.settings-page .luxury-save-button {
+  background-color: var(--color-luxury-gold) !important;
+  border: 1px solid var(--color-luxury-gold) !important;
+  color: var(--color-jet-black) !important;
+}
+
+.settings-page .luxury-save-button:hover {
+  background-color: var(--color-rose-gold) !important;
+  border-color: var(--color-rose-gold) !important;
+  color: var(--color-jet-black) !important;
+  box-shadow: var(--shadow-luxury-glow) !important;
+  transform: translateY(-2px) !important;
+}
+
+.settings-page .luxury-add-button {
+  background-color: transparent !important;
+  border: 1px solid var(--color-rose-gold) !important;
+  color: var(--color-rose-gold) !important;
+}
+
+.settings-page .luxury-add-button:hover {
+  background-color: var(--color-rose-gold-glass) !important;
+  border-color: var(--color-bronze-gold) !important;
+  color: var(--color-bronze-gold) !important;
+  box-shadow: var(--shadow-rose-gold) !important;
+  transform: translateY(-2px) !important;
 }
 
 .neon-text-green {
@@ -549,4 +805,256 @@ body > div:not(#app) {
   width: 0 !important;
   height: 0 !important;
   overflow: hidden !important;
+}
+
+/* 奢华主题组件类库 / Luxury Theme Component Library */
+
+/* 奢华卡片效果 / Luxury Card Effect */
+.luxury-card {
+  background: var(--color-luxury-glass);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--color-luxury-gold);
+  border-radius: 1rem;
+  box-shadow: var(--shadow-luxury-multi);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.luxury-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    var(--color-luxury-gold) 20%,
+    var(--color-rose-gold) 50%,
+    var(--color-platinum) 80%,
+    transparent 100%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.luxury-card:hover::before {
+  opacity: 1;
+}
+
+.luxury-card:hover {
+  background: rgba(212, 175, 55, 0.15);
+  border-color: var(--color-rose-gold);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3), 0 6px 25px rgba(212, 175, 55, 0.4);
+  transform: translateY(-4px) scale(1.01);
+}
+
+/* 奢华按钮样式 / Luxury Button Styles */
+.luxury-button-primary {
+  background: var(--color-luxury-gold);
+  color: var(--color-jet-black);
+  border: none;
+  border-radius: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  box-shadow: var(--shadow-luxury);
+  position: relative;
+  overflow: hidden;
+}
+
+.luxury-button-primary::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  background: var(--color-rose-gold);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: width 0.6s ease, height 0.6s ease;
+}
+
+.luxury-button-primary:hover::before {
+  width: 300px;
+  height: 300px;
+}
+
+.luxury-button-primary:hover {
+  background: var(--color-rose-gold);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-luxury-glow);
+  color: var(--color-jet-black);
+}
+
+.luxury-button-primary span {
+  position: relative;
+  z-index: 1;
+}
+
+.luxury-button-secondary {
+  background: transparent;
+  color: var(--color-luxury-gold);
+  border: 1px solid var(--color-luxury-gold);
+  border-radius: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.luxury-button-secondary:hover {
+  background: var(--color-luxury-gold);
+  color: var(--color-jet-black);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-luxury-glow);
+}
+
+/* 奢华输入框样式 / Luxury Input Styles */
+.luxury-input {
+  background: var(--color-charcoal);
+  border: 1px solid var(--color-luxury-gold);
+  border-radius: 0.5rem;
+  color: var(--color-text-primary);
+  padding: 0.75rem 1rem;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.luxury-input:focus {
+  border-color: var(--color-luxury-gold);
+  box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.2), var(--shadow-luxury-glow);
+  outline: none;
+  background: rgba(26, 26, 26, 0.8);
+}
+
+.luxury-input::placeholder {
+  color: var(--color-text-muted);
+}
+
+/* 奢华文本效果 / Luxury Text Effects */
+.luxury-text-gold {
+  background: linear-gradient(135deg, var(--color-luxury-gold), var(--color-champagne-gold));
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 2px 4px rgba(212, 175, 55, 0.3);
+}
+
+.luxury-text-rose {
+  background: linear-gradient(135deg, var(--color-rose-gold), var(--color-bronze-gold));
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 2px 4px rgba(232, 180, 184, 0.3);
+}
+
+.luxury-text-platinum {
+  background: linear-gradient(135deg, var(--color-platinum), var(--color-stainless-silver));
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 2px 4px rgba(229, 228, 226, 0.3);
+}
+
+/* 奢华玻璃效果增强 / Enhanced Luxury Glass Effect */
+.luxury-glass {
+  background: var(--color-luxury-glass);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--color-luxury-gold);
+  border-radius: 1rem;
+  box-shadow: var(--shadow-luxury-multi);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.luxury-glass::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 50%, rgba(212, 175, 55, 0.02) 100%);
+  border-radius: 1rem;
+  pointer-events: none;
+}
+
+.luxury-glass:hover {
+  background: rgba(212, 175, 55, 0.15);
+  border-color: var(--color-rose-gold);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3), 0 6px 25px rgba(212, 175, 55, 0.4);
+  transform: translateY(-2px);
+}
+
+/* 奢华边框效果 / Luxury Border Effects */
+.luxury-border-gold {
+  border: 1px solid var(--color-luxury-gold);
+  box-shadow: 0 0 10px rgba(212, 175, 55, 0.3), inset 0 0 10px rgba(212, 175, 55, 0.1);
+}
+
+.luxury-border-rose {
+  border: 1px solid var(--color-rose-gold);
+  box-shadow: 0 0 10px rgba(232, 180, 184, 0.3), inset 0 0 10px rgba(232, 180, 184, 0.1);
+}
+
+.luxury-border-platinum {
+  border: 1px solid var(--color-platinum);
+  box-shadow: 0 0 10px rgba(229, 228, 226, 0.3), inset 0 0 10px rgba(229, 228, 226, 0.1);
+}
+
+/* 奢华光晕效果 / Luxury Glow Effects */
+.luxury-glow-gold {
+  box-shadow: 0 0 20px rgba(212, 175, 55, 0.5), 0 0 40px rgba(212, 175, 55, 0.3), 0 0 60px rgba(212, 175, 55, 0.1);
+}
+
+.luxury-glow-rose {
+  box-shadow: 0 0 20px rgba(232, 180, 184, 0.5), 0 0 40px rgba(232, 180, 184, 0.3), 0 0 60px rgba(232, 180, 184, 0.1);
+}
+
+.luxury-glow-platinum {
+  box-shadow: 0 0 20px rgba(229, 228, 226, 0.5), 0 0 40px rgba(229, 228, 226, 0.3), 0 0 60px rgba(229, 228, 226, 0.1);
+}
+
+/* 奢华动画定义 / Luxury Animation Definitions */
+@keyframes luxury-float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes luxury-glow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(212, 175, 55, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(212, 175, 55, 0.8);
+  }
+}
+
+@keyframes luxury-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+/* 奢华动画类 / Luxury Animation Classes */
+.animate-luxury-float {
+  animation: luxury-float 6s ease-in-out infinite;
+}
+
+.animate-luxury-glow {
+  animation: luxury-glow 3s ease-in-out infinite alternate;
+}
+
+.animate-luxury-pulse {
+  animation: luxury-pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }

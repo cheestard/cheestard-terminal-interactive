@@ -2,19 +2,18 @@
 import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import Button from 'primevue/button'
-import Card from 'primevue/card'
-import InputText from 'primevue/inputtext'
-import InputNumber from 'primevue/inputnumber'
-import RadioButton from 'primevue/radiobutton'
-import Toast from 'primevue/toast'
-import ConfirmationDialog from 'primevue/confirmdialog'
-import { useToast } from 'primevue/usetoast'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { Toaster } from '@/components/ui/sonner'
+import { toast } from 'sonner'
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
+import { Label } from '@/components/ui/label'
 import { useSettingsStore } from '../stores/settings'
 
 const router = useRouter()
 const { t, locale } = useI18n()
-const toast = useToast()
 const settingsStore = useSettingsStore()
 
 // 语言选项 / Language options
@@ -83,12 +82,7 @@ const loadConfiguration = async () => {
     hasChanges.value = false
   } catch (error) {
     console.error('Failed to load configuration:', error)
-    toast.add({
-      severity: 'error',
-      summary: t('common.error'),
-      detail: 'Failed to load configuration',
-      life: 3000
-    })
+    toast.error(t('common.error') + ': Failed to load configuration')
   } finally {
     isLoading.value = false
   }
@@ -109,20 +103,10 @@ const saveConfiguration = async () => {
     originalConfigData.value = JSON.parse(JSON.stringify(configData.value))
     hasChanges.value = false
     
-    toast.add({
-      severity: 'success',
-      summary: t('common.success'),
-      detail: t('settings.configSaved'),
-      life: 3000
-    })
+    toast.success(t('common.success') + ': ' + t('settings.configSaved'))
   } catch (error) {
     console.error('Failed to save configuration:', error)
-    toast.add({
-      severity: 'error',
-      summary: t('common.error'),
-      detail: 'Failed to save configuration',
-      life: 3000
-    })
+    toast.error(t('common.error') + ': Failed to save configuration')
   } finally {
     isLoading.value = false
   }
@@ -135,20 +119,10 @@ const resetConfiguration = async () => {
     await settingsStore.resetSettings()
     await loadConfiguration()
     
-    toast.add({
-      severity: 'success',
-      summary: t('common.success'),
-      detail: t('settings.configReset'),
-      life: 3000
-    })
+    toast.success(t('common.success') + ': ' + t('settings.configReset'))
   } catch (error) {
     console.error('Failed to reset configuration:', error)
-    toast.add({
-      severity: 'error',
-      summary: t('common.error'),
-      detail: 'Failed to reset configuration',
-      life: 3000
-    })
+    toast.error(t('common.error') + ': Failed to reset configuration')
   } finally {
     isLoading.value = false
   }
@@ -188,15 +162,21 @@ onMounted(async () => {
 
 <template>
   <div class="settings-page h-screen bg-jet-black text-text-primary relative luxury-settings-container flex flex-col">
-    <Toast />
-    <ConfirmationDialog
-      :visible="showResetDialog"
-      :message="t('settings.resetConfirm')"
-      :header="t('common.confirm')"
-      icon="pi pi-exclamation-triangle"
-      @accept="resetConfiguration"
-      @reject="rejectReset"
-    />
+    <Toaster />
+    <AlertDialog :open="showResetDialog" @update:open="showResetDialog = $event">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{{ t('common.confirm') }}</AlertDialogTitle>
+          <AlertDialogDescription>
+            {{ t('settings.resetConfirm') }}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel @click="rejectReset">{{ t('common.cancel') }}</AlertDialogCancel>
+          <AlertDialogAction @click="resetConfiguration">{{ t('common.confirm') }}</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
     
     <!-- 奢华页面头部 / Luxury page header -->
     <div class="luxury-header animate-slide-up">
@@ -204,35 +184,45 @@ onMounted(async () => {
         <div class="flex items-center justify-between">
           <div class="flex items-center space-x-4">
             <Button
-              icon="pi pi-arrow-left"
-              :label="t('settings.backToHome')"
-              text
-              severity="secondary"
+              variant="outline"
               class="luxury-back-button"
               @click="goBack"
-            />
+            >
+              <svg class="w-4 h-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+              {{ t('settings.backToHome') }}
+            </Button>
             <h1 class="text-2xl font-bold font-serif-luxury bg-gradient-luxury bg-clip-text text-transparent">{{ t('settings.title') }}</h1>
           </div>
           
           <!-- 奢华操作按钮 / Luxury action buttons -->
           <div class="flex items-center space-x-3">
             <Button
-              :label="t('settings.reset')"
-              icon="pi pi-refresh"
-              severity="secondary"
+              variant="outline"
               class="luxury-reset-button"
               @click="confirmReset"
               :disabled="isLoading"
-            />
+            >
+              <svg class="w-4 h-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              {{ t('settings.reset') }}
+            </Button>
             <Button
-              :label="t('settings.save')"
-              icon="pi pi-save"
-              severity="primary"
               class="luxury-save-button"
               @click="saveConfiguration"
               :disabled="!hasChanges || isLoading"
-              :loading="isLoading"
-            />
+            >
+              <svg v-if="isLoading" class="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              <svg v-else class="w-4 h-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V2" />
+              </svg>
+              {{ t('settings.save') }}
+            </Button>
           </div>
         </div>
       </div>
@@ -243,57 +233,66 @@ onMounted(async () => {
       <div class="space-y-8">
         <!-- 奢华应用配置 / Luxury application configuration -->
         <Card class="luxury-card border border-luxury-gold hover:shadow-luxury hover:border-rose-gold transition-all duration-300 animate-fade-in group">
-          <template #title>
-            <div class="flex items-center space-x-2">
-              <i class="pi pi-cog text-luxury-gold"></i>
-              <span class="text-text-primary font-semibold font-serif-luxury">{{ t('settings.appConfig') }}</span>
-            </div>
-          </template>
-          <template #content>
+          <CardHeader>
+            <CardTitle>
+              <div class="flex items-center space-x-2">
+                <svg class="w-5 h-5 text-luxury-gold" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                <span class="text-text-primary font-semibold font-serif-luxury">{{ t('settings.appConfig') }}</span>
+              </div>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
             <div class="space-y-6">
               <div class="flex flex-col space-y-2">
-                <label class="flex items-center space-x-2 text-text-primary font-medium">
-                  <i class="pi pi-language text-luxury-gold"></i>
+                <Label class="flex items-center space-x-2 text-text-primary font-medium">
+                  <svg class="w-4 h-4 text-luxury-gold" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
+                  </svg>
                   <span class="font-serif-luxury">{{ t('settings.language') }}</span>
-                </label>
-                <div class="space-y-3">
+                </Label>
+                <RadioGroup v-model="selectedLanguage" class="space-y-3">
                   <div
                     v-for="option in languageOptions"
                     :key="option.value"
                     class="flex items-center space-x-3 p-3 rounded-lg bg-charcoal border border-luxury-gold hover:bg-luxury-glass transition-colors duration-200 luxury-language-option cursor-pointer"
                     @click="selectedLanguage = option.value"
                   >
-                    <RadioButton
-                      v-model="selectedLanguage"
-                      :inputId="`lang-${option.value}`"
-                      :value="option.value"
-                    />
-                    <label :for="`lang-${option.value}`" class="text-text-primary cursor-pointer">
+                    <RadioGroupItem :id="`lang-${option.value}`" :value="option.value" />
+                    <Label :for="`lang-${option.value}`" class="text-text-primary cursor-pointer">
                       {{ option.label }}
-                    </label>
+                    </Label>
                   </div>
-                </div>
+                </RadioGroup>
               </div>
             </div>
-          </template>
+          </CardContent>
         </Card>
 
         <!-- 奢华服务器配置 / Luxury server configuration -->
         <Card class="luxury-card border border-rose-gold hover:shadow-luxury hover:border-luxury-gold transition-all duration-300 animate-fade-in group">
-          <template #title>
-            <div class="flex items-center space-x-2">
-              <i class="pi pi-server text-rose-gold"></i>
-              <span class="text-text-primary font-semibold font-serif-luxury">{{ t('settings.serverConfig') }}</span>
-            </div>
-          </template>
-          <template #content>
+          <CardHeader>
+            <CardTitle>
+              <div class="flex items-center space-x-2">
+                <svg class="w-5 h-5 text-rose-gold" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
+                </svg>
+                <span class="text-text-primary font-semibold font-serif-luxury">{{ t('settings.serverConfig') }}</span>
+              </div>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
             <div class="space-y-6">
               <div class="flex flex-col space-y-2">
-                <label for="host" class="flex items-center space-x-2 text-text-primary font-medium">
-                  <i class="pi pi-globe text-rose-gold"></i>
+                <Label for="host" class="flex items-center space-x-2 text-text-primary font-medium">
+                  <svg class="w-4 h-4 text-rose-gold" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
                   <span class="font-serif-luxury">{{ t('settings.host') }}</span>
-                </label>
-                <InputText
+                </Label>
+                <Input
                   id="host"
                   v-model="configData.server.host"
                   class="w-full max-w-md bg-charcoal border-rose-gold text-text-primary focus:border-luxury-gold luxury-input"
@@ -302,172 +301,144 @@ onMounted(async () => {
               </div>
               
               <div class="flex flex-col space-y-2">
-                <label for="port" class="flex items-center space-x-2 text-text-primary font-medium">
-                  <i class="pi pi-key text-rose-gold"></i>
+                <Label for="port" class="flex items-center space-x-2 text-text-primary font-medium">
+                  <svg class="w-4 h-4 text-rose-gold" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                  </svg>
                   <span class="font-serif-luxury">{{ t('settings.port') }}</span>
-                </label>
-                <InputNumber
+                </Label>
+                <Input
                   id="port"
                   v-model="configData.server.port"
+                  type="number"
                   class="w-full max-w-md bg-charcoal border-rose-gold text-text-primary focus:border-luxury-gold luxury-input"
                   :min="1"
                   :max="65535"
                 />
               </div>
-              
-              <div class="flex flex-col space-y-2">
-                <label class="flex items-center space-x-2 text-text-primary font-medium">
-                  <i class="pi pi-shield text-rose-gold"></i>
-                  <span class="font-serif-luxury">{{ t('settings.corsOrigin') }}</span>
-                </label>
-                <div class="space-y-2">
-                  <div
-                    v-for="(origin, index) in configData.server.cors.origin"
-                    :key="index"
-                    class="flex items-center space-x-2"
-                  >
-                    <InputText
-                      v-model="configData.server.cors.origin[index]"
-                      class="flex-1 bg-charcoal border-rose-gold text-text-primary focus:border-luxury-gold luxury-input"
-                      placeholder="http://localhost:1107"
-                    />
-                    <Button
-                      icon="pi pi-times"
-                      severity="danger"
-                      size="small"
-                      text
-                      class="luxury-delete-button"
-                      @click="configData.server.cors.origin.splice(index, 1)"
-                    />
-                  </div>
-                  <Button
-                    icon="pi pi-plus"
-                    :label="t('common.create')"
-                    severity="secondary"
-                    size="small"
-                    class="luxury-add-button"
-                    @click="configData.server.cors.origin.push('')"
-                  />
-                </div>
-              </div>
-              
-              <div class="flex flex-col space-y-2">
-                <label class="flex items-center space-x-2 text-text-primary font-medium">
-                  <i class="pi pi-check text-neon-purple"></i>
-                  <span>{{ t('settings.corsCredentials') }}</span>
-                </label>
-                <div class="flex items-center">
-                  <label class="luxury-checkbox-container">
-                    <input
-                      type="checkbox"
-                      v-model="configData.server.cors.credentials"
-                      class="luxury-checkbox"
-                    />
-                    <span class="luxury-checkbox-slider"></span>
-                  </label>
-                  <span class="ml-3 text-text-primary select-none">{{ configData.server.cors.credentials ? 'Enabled' : 'Disabled' }}</span>
-                </div>
-              </div>
             </div>
-          </template>
+          </CardContent>
         </Card>
 
         <!-- 奢华终端配置 / Luxury terminal configuration -->
         <Card class="luxury-card border border-platinum hover:shadow-luxury hover:border-luxury-gold transition-all duration-300 animate-fade-in group">
-          <template #title>
-            <div class="flex items-center space-x-2">
-              <i class="pi pi-desktop text-platinum"></i>
-              <span class="text-text-primary font-semibold font-serif-luxury">{{ t('settings.terminalConfig') }}</span>
-            </div>
-          </template>
-          <template #content>
+          <CardHeader>
+            <CardTitle>
+              <div class="flex items-center space-x-2">
+                <svg class="w-5 h-5 text-platinum" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                <span class="text-text-primary font-semibold font-serif-luxury">{{ t('settings.terminalConfig') }}</span>
+              </div>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
             <div class="space-y-6">
               <div class="flex flex-col space-y-2">
-                <label for="defaultShell" class="flex items-center space-x-2 text-text-primary font-medium">
-                  <i class="pi pi-terminal text-neon-green"></i>
-                  <span>{{ t('settings.defaultShell') }}</span>
-                </label>
-                <InputText
+                <Label for="defaultShell" class="flex items-center space-x-2 text-text-primary font-medium">
+                  <svg class="w-4 h-4 text-neon-green" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <span class="font-serif-luxury">{{ t('settings.defaultShell') }}</span>
+                </Label>
+                <Input
                   id="defaultShell"
                   v-model="configData.terminal.defaultShell"
-                  class="w-full max-w-md bg-charcoal border-border-dark text-text-primary focus:border-neon-green"
+                  class="w-full max-w-md bg-charcoal border-border-dark text-text-primary focus:border-neon-green luxury-input"
                   placeholder="pwsh.exe"
                 />
               </div>
               
               <div class="flex flex-col space-y-2">
-                <label for="fontSize" class="flex items-center space-x-2 text-text-primary font-medium">
-                  <i class="pi pi-text text-neon-green"></i>
-                  <span>{{ t('settings.fontSize') }}</span>
-                </label>
-                <InputNumber
+                <Label for="fontSize" class="flex items-center space-x-2 text-text-primary font-medium">
+                  <svg class="w-4 h-4 text-neon-green" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />
+                  </svg>
+                  <span class="font-serif-luxury">{{ t('settings.fontSize') }}</span>
+                </Label>
+                <Input
                   id="fontSize"
                   v-model="configData.terminal.fontSize"
-                  class="w-full max-w-md bg-charcoal border-border-dark text-text-primary focus:border-neon-green"
+                  type="number"
+                  class="w-full max-w-md bg-charcoal border-border-dark text-text-primary focus:border-neon-green luxury-input"
                   :min="8"
                   :max="72"
                 />
               </div>
               
               <div class="flex flex-col space-y-2">
-                <label for="fontFamily" class="flex items-center space-x-2 text-text-primary font-medium">
-                  <i class="pi pi-font text-neon-green"></i>
-                  <span>{{ t('settings.fontFamily') }}</span>
-                </label>
-                <InputText
+                <Label for="fontFamily" class="flex items-center space-x-2 text-text-primary font-medium">
+                  <svg class="w-4 h-4 text-neon-green" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                  </svg>
+                  <span class="font-serif-luxury">{{ t('settings.fontFamily') }}</span>
+                </Label>
+                <Input
                   id="fontFamily"
                   v-model="configData.terminal.fontFamily"
-                  class="w-full max-w-md bg-charcoal border-border-dark text-text-primary focus:border-neon-green"
+                  class="w-full max-w-md bg-charcoal border-border-dark text-text-primary focus:border-neon-green luxury-input"
                   placeholder="Consolas, 'Courier New', monospace"
                 />
               </div>
               
               <div class="flex flex-col space-y-2">
-                <label for="maxBufferSize" class="flex items-center space-x-2 text-text-primary font-medium">
-                  <i class="pi pi-database text-neon-green"></i>
-                  <span>{{ t('settings.maxBufferSize') }}</span>
-                </label>
-                <InputNumber
+                <Label for="maxBufferSize" class="flex items-center space-x-2 text-text-primary font-medium">
+                  <svg class="w-4 h-4 text-neon-green" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
+                  </svg>
+                  <span class="font-serif-luxury">{{ t('settings.maxBufferSize') }}</span>
+                </Label>
+                <Input
                   id="maxBufferSize"
                   v-model="configData.terminal.maxBufferSize"
-                  class="w-full max-w-md bg-charcoal border-border-dark text-text-primary focus:border-neon-green"
+                  type="number"
+                  class="w-full max-w-md bg-charcoal border-border-dark text-text-primary focus:border-neon-green luxury-input"
                   :min="1000"
                   :max="100000"
                 />
               </div>
               
               <div class="flex flex-col space-y-2">
-                <label for="sessionTimeout" class="flex items-center space-x-2 text-text-primary font-medium">
-                  <i class="pi pi-clock text-neon-green"></i>
-                  <span>{{ t('settings.sessionTimeout') }}</span>
-                </label>
-                <InputNumber
+                <Label for="sessionTimeout" class="flex items-center space-x-2 text-text-primary font-medium">
+                  <svg class="w-4 h-4 text-neon-green" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span class="font-serif-luxury">{{ t('settings.sessionTimeout') }}</span>
+                </Label>
+                <Input
                   id="sessionTimeout"
                   v-model="configData.terminal.sessionTimeout"
-                  class="w-full max-w-md bg-charcoal border-border-dark text-text-primary focus:border-neon-green"
+                  type="number"
+                  class="w-full max-w-md bg-charcoal border-border-dark text-text-primary focus:border-neon-green luxury-input"
                   :min="60000"
                   :max="604800000"
                 />
               </div>
             </div>
-          </template>
+          </CardContent>
         </Card>
 
         <!-- MCP配置 / MCP configuration -->
-        <Card class="glass-effect border border-border-dark hover:shadow-glass hover:border-accent-cyan transition-all duration-300 animate-fade-in group">
-          <template #title>
-            <div class="flex items-center space-x-2">
-              <i class="pi pi-link text-accent-cyan"></i>
-              <span class="text-text-primary font-semibold">{{ t('settings.mcpConfig') }}</span>
-            </div>
-          </template>
-          <template #content>
+        <Card class="luxury-card border border-accent-cyan hover:shadow-luxury hover:border-luxury-gold transition-all duration-300 animate-fade-in group">
+          <CardHeader>
+            <CardTitle>
+              <div class="flex items-center space-x-2">
+                <svg class="w-5 h-5 text-accent-cyan" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                </svg>
+                <span class="text-text-primary font-semibold font-serif-luxury">{{ t('settings.mcpConfig') }}</span>
+              </div>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
             <div class="space-y-6">
               <div class="flex flex-col space-y-2">
-                <label class="flex items-center space-x-2 text-text-primary font-medium">
-                  <i class="pi pi-shield text-accent-cyan"></i>
-                  <span>{{ t('settings.enableDnsRebindingProtection') }}</span>
-                </label>
+                <Label class="flex items-center space-x-2 text-text-primary font-medium">
+                  <svg class="w-4 h-4 text-accent-cyan" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                  </svg>
+                  <span class="font-serif-luxury">{{ t('settings.enableDnsRebindingProtection') }}</span>
+                </Label>
                 <div class="flex items-center">
                   <label class="luxury-checkbox-container">
                     <input
@@ -482,72 +453,87 @@ onMounted(async () => {
               </div>
               
               <div class="flex flex-col space-y-2">
-                <label class="flex items-center space-x-2 text-text-primary font-medium">
-                  <i class="pi pi-list text-accent-cyan"></i>
-                  <span>{{ t('settings.allowedHosts') }}</span>
-                </label>
+                <Label class="flex items-center space-x-2 text-text-primary font-medium">
+                  <svg class="w-4 h-4 text-accent-cyan" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                  </svg>
+                  <span class="font-serif-luxury">{{ t('settings.allowedHosts') }}</span>
+                </Label>
                 <div class="space-y-2">
                   <div
                     v-for="(host, index) in configData.mcp.allowedHosts"
                     :key="index"
                     class="flex items-center space-x-2"
                   >
-                    <InputText
+                    <Input
                       v-model="configData.mcp.allowedHosts[index]"
-                      class="flex-1 bg-charcoal border-border-dark text-text-primary focus:border-accent-cyan"
+                      class="flex-1 bg-charcoal border-border-dark text-text-primary focus:border-accent-cyan luxury-input"
                       placeholder="127.0.0.1"
                     />
                     <Button
-                      icon="pi pi-times"
-                      severity="danger"
-                      size="small"
-                      text
+                      variant="ghost"
+                      size="sm"
                       class="luxury-delete-button"
                       @click="configData.mcp.allowedHosts.splice(index, 1)"
-                    />
+                    >
+                      <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </Button>
                   </div>
                   <Button
-                    icon="pi pi-plus"
-                    :label="t('common.create')"
-                    severity="secondary"
-                    size="small"
+                    variant="outline"
+                    size="sm"
                     class="luxury-add-button-cyan"
                     @click="configData.mcp.allowedHosts.push('')"
-                  />
+                  >
+                    <svg class="w-4 h-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                    {{ t('common.create') }}
+                  </Button>
                 </div>
               </div>
             </div>
-          </template>
+          </CardContent>
         </Card>
 
         <!-- 日志配置 / Logging configuration -->
-        <Card class="glass-effect border border-border-dark hover:shadow-glass hover:border-accent-violet transition-all duration-300 animate-fade-in group">
-          <template #title>
-            <div class="flex items-center space-x-2">
-              <i class="pi pi-file text-accent-violet"></i>
-              <span class="text-text-primary font-semibold">{{ t('settings.loggingConfig') }}</span>
-            </div>
-          </template>
-          <template #content>
+        <Card class="luxury-card border border-accent-violet hover:shadow-luxury hover:border-luxury-gold transition-all duration-300 animate-fade-in group">
+          <CardHeader>
+            <CardTitle>
+              <div class="flex items-center space-x-2">
+                <svg class="w-5 h-5 text-accent-violet" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <span class="text-text-primary font-semibold font-serif-luxury">{{ t('settings.loggingConfig') }}</span>
+              </div>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
             <div class="space-y-6">
               <div class="flex flex-col space-y-2">
-                <label for="logLevel" class="flex items-center space-x-2 text-text-primary font-medium">
-                  <i class="pi pi-filter text-accent-violet"></i>
-                  <span>{{ t('settings.logLevel') }}</span>
-                </label>
-                <InputText
+                <Label for="logLevel" class="flex items-center space-x-2 text-text-primary font-medium">
+                  <svg class="w-4 h-4 text-accent-violet" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                  </svg>
+                  <span class="font-serif-luxury">{{ t('settings.logLevel') }}</span>
+                </Label>
+                <Input
                   id="logLevel"
                   v-model="configData.logging.level"
-                  class="w-full max-w-md bg-charcoal border-border-dark text-text-primary focus:border-accent-violet"
+                  class="w-full max-w-md bg-charcoal border-border-dark text-text-primary focus:border-accent-violet luxury-input"
                   placeholder="info"
                 />
               </div>
               
               <div class="flex flex-col space-y-2">
-                <label class="flex items-center space-x-2 text-text-primary font-medium">
-                  <i class="pi pi-desktop text-accent-violet"></i>
-                  <span>{{ t('settings.enableConsole') }}</span>
-                </label>
+                <Label class="flex items-center space-x-2 text-text-primary font-medium">
+                  <svg class="w-4 h-4 text-accent-violet" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                  <span class="font-serif-luxury">{{ t('settings.enableConsole') }}</span>
+                </Label>
                 <div class="flex items-center">
                   <label class="luxury-checkbox-container">
                     <input
@@ -562,10 +548,12 @@ onMounted(async () => {
               </div>
               
               <div class="flex flex-col space-y-2">
-                <label class="flex items-center space-x-2 text-text-primary font-medium">
-                  <i class="pi pi-file text-accent-violet"></i>
-                  <span>{{ t('settings.enableFile') }}</span>
-                </label>
+                <Label class="flex items-center space-x-2 text-text-primary font-medium">
+                  <svg class="w-4 h-4 text-accent-violet" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  <span class="font-serif-luxury">{{ t('settings.enableFile') }}</span>
+                </Label>
                 <div class="flex items-center">
                   <label class="luxury-checkbox-container">
                     <input
@@ -580,19 +568,21 @@ onMounted(async () => {
               </div>
               
               <div class="flex flex-col space-y-2" v-if="configData.logging.enableFile">
-                <label for="filePath" class="flex items-center space-x-2 text-text-primary font-medium">
-                  <i class="pi pi-folder text-accent-violet"></i>
-                  <span>{{ t('settings.filePath') }}</span>
-                </label>
-                <InputText
+                <Label for="filePath" class="flex items-center space-x-2 text-text-primary font-medium">
+                  <svg class="w-4 h-4 text-accent-violet" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                  </svg>
+                  <span class="font-serif-luxury">{{ t('settings.filePath') }}</span>
+                </Label>
+                <Input
                   id="filePath"
                   v-model="configData.logging.filePath"
-                  class="w-full max-w-md bg-charcoal border-border-dark text-text-primary focus:border-accent-violet"
+                  class="w-full max-w-md bg-charcoal border-border-dark text-text-primary focus:border-accent-violet luxury-input"
                   placeholder="./logs/app.log"
                 />
               </div>
             </div>
-          </template>
+          </CardContent>
         </Card>
       </div>
     </div>
@@ -927,45 +917,52 @@ onMounted(async () => {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: #f8f8f8;
-  border: 2px solid var(--luxury-gold);
+  background-color: #2a2a2a;
+  border: 2px solid #4a4a4a;
   border-radius: 1.5rem;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .luxury-checkbox-slider:before {
   position: absolute;
   content: "";
-  height: 1rem;
-  width: 1rem;
-  left: 0.25rem;
-  bottom: 0.25rem;
-  background-color: var(--luxury-gold);
+  height: 0.9rem;
+  width: 0.9rem;
+  left: 0.3rem;
+  bottom: 0.3rem;
+  background: linear-gradient(135deg, #d4af37, #f4e4c1);
   border-radius: 50%;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
 }
 
 .luxury-checkbox:checked + .luxury-checkbox-slider {
-  background-color: var(--luxury-gold);
+  background: linear-gradient(135deg, #1a1a1a, #2a2a2a);
   border-color: var(--luxury-gold);
-  box-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
+  box-shadow: 0 0 15px rgba(212, 175, 55, 0.4), inset 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .luxury-checkbox:checked + .luxury-checkbox-slider:before {
   transform: translateX(1.5rem);
-  background-color: #ffffff;
+  background: linear-gradient(135deg, #ffffff, #f4e4c1);
+  box-shadow: 0 2px 8px rgba(212, 175, 55, 0.6);
 }
 
 .luxury-checkbox-slider:hover {
   border-color: var(--rose-gold);
-  box-shadow: 0 0 5px rgba(232, 180, 184, 0.2);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3), 0 0 8px rgba(232, 180, 184, 0.3);
 }
 
 .luxury-checkbox:checked + .luxury-checkbox-slider:hover {
-  background-color: var(--rose-gold);
+  background: linear-gradient(135deg, #1a1a1a, #2a2a2a);
   border-color: var(--rose-gold);
-  box-shadow: 0 0 15px rgba(232, 180, 184, 0.4);
+  box-shadow: 0 0 20px rgba(232, 180, 184, 0.5), inset 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.luxury-checkbox-slider:hover:before {
+  background: linear-gradient(135deg, #e8b484, #f4e4c1);
 }
 </style>

@@ -2,9 +2,9 @@
 import { ref, onMounted, onUnmounted, nextTick, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import Button from 'primevue/button'
-import Card from 'primevue/card'
-import Badge from 'primevue/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 import { Terminal } from 'xterm'
 import { FitAddon } from 'xterm-addon-fit'
 import { initializeApiService, terminalApi } from '../services/api-service'
@@ -373,22 +373,26 @@ onUnmounted(() => {
     <!-- 顶部控制栏 -->
     <header class="terminal-header">
       <div class="header-left">
-        <Button 
-          icon="pi pi-arrow-left" 
-          :label="t('terminal.backToList')" 
-          severity="secondary" 
-          size="small"
+        <Button
+          variant="secondary"
+          size="sm"
           class="back-btn"
           @click="$router.push('/')"
-        />
+        >
+          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+          {{ t('terminal.backToList') }}
+        </Button>
         <div class="terminal-title">
           <span class="terminal-icon">💻</span>
           <span class="terminal-name">Terminal {{ terminalId.substring(0, 8) }}</span>
-          <Badge 
-            :severity="connectionStatus.severity" 
-            :value="connectionStatus.text"
+          <Badge
+            :variant="connectionStatus.severity === 'success' ? 'default' : 'destructive'"
             class="connection-badge"
-          />
+          >
+            {{ connectionStatus.text }}
+          </Badge>
         </div>
       </div>
       
@@ -401,39 +405,54 @@ onUnmounted(() => {
         </div>
         
         <div class="control-buttons">
-          <Button 
-            icon="pi pi-trash" 
-            v-tooltip="'清空终端'"
-            severity="secondary" 
-            size="small"
+          <Button
+            variant="secondary"
+            size="sm"
             class="control-btn"
             @click="clearTerminal"
-          />
-          <Button 
-            icon="pi pi-refresh" 
-            v-tooltip="'重新连接'"
-            severity="secondary" 
-            size="small"
+            title="清空终端"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
             class="control-btn"
-            @click="reconnect" 
+            @click="reconnect"
             :disabled="isConnected"
-          />
-          <Button 
-            icon="pi pi-times" 
-            v-tooltip="'终止终端'"
-            severity="danger" 
-            size="small"
+            title="重新连接"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+          </Button>
+          <Button
+            variant="destructive"
+            size="sm"
             class="control-btn"
             @click="killTerminal"
-          />
-          <Button 
-            :icon="isFullscreen ? 'pi pi-window-minimize' : 'pi pi-window-maximize'" 
-            v-tooltip="isFullscreen ? '退出全屏' : '全屏'"
-            severity="secondary" 
-            size="small"
+            title="终止终端"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
             class="control-btn"
             @click="toggleFullscreen"
-          />
+            :title="isFullscreen ? '退出全屏' : '全屏'"
+          >
+            <svg v-if="isFullscreen" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25" />
+            </svg>
+            <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+            </svg>
+          </Button>
         </div>
       </div>
     </header>
@@ -444,7 +463,10 @@ onUnmounted(() => {
       <div v-if="isLoading" class="loading-container">
         <div class="loading-content">
           <div class="loading-spinner">
-            <i class="pi pi-spin pi-spinner"></i>
+            <svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
           </div>
           <p class="loading-text">{{ t('common.loading') }}</p>
         </div>
@@ -455,13 +477,17 @@ onUnmounted(() => {
         <!-- 侧边信息面板 -->
         <aside class="info-panel" :class="{ 'collapsed': isFullscreen }">
           <Card class="info-card">
-            <template #title>
-              <div class="panel-title">
-                <i class="pi pi-info-circle"></i>
-                {{ t('terminal.terminalInfo') }}
-              </div>
-            </template>
-            <template #content>
+            <CardHeader>
+              <CardTitle>
+                <div class="panel-title">
+                  <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  {{ t('terminal.terminalInfo') }}
+                </div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
               <div class="info-content">
                 <div class="info-item">
                   <span class="info-label">
@@ -496,13 +522,14 @@ onUnmounted(() => {
                     <i class="pi pi-check-circle"></i>
                     {{ t('home.status') }}
                   </span>
-                  <Badge 
-                    :severity="terminal?.status === 'active' ? 'success' : 'warning'" 
-                    :value="terminal?.status" 
-                  />
+                  <Badge
+                    :variant="terminal?.status === 'active' ? 'default' : 'secondary'"
+                  >
+                    {{ terminal?.status }}
+                  </Badge>
                 </div>
               </div>
-            </template>
+            </CardContent>
           </Card>
         </aside>
 

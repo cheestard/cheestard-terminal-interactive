@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import Button from 'primevue/button'
+import { Button } from '@/components/ui/button'
 
 const { locale } = useI18n()
 
@@ -21,27 +21,28 @@ const switchLanguage = () => {
 <template>
   <div class="language-switcher">
     <Button
-      :label="isChinese ? '🇺🇸 English' : '🇨🇳 简体中文'"
-      type="button"
+      variant="outline"
       class="language-button"
       @click="switchLanguage"
-    />
+    >
+      {{ isChinese ? '🇺🇸 English' : '🇨🇳 简体中文' }}
+    </Button>
   </div>
 </template>
 
 <style scoped>
-/* 语言切换器容器 */
+/* 语言切换器容器 / Language switcher container */
 .language-switcher {
   display: inline-flex;
   gap: 8px;
 }
 
-/* 主按钮样式 */
+/* 主按钮样式 / Main button styles */
 .language-button {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.1) !important;
   backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: var(--text-primary);
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  color: var(--text-primary) !important;
   padding: 8px 16px;
   border-radius: 8px;
   font-weight: 500;
@@ -50,7 +51,7 @@ const switchLanguage = () => {
 }
 
 .language-button:hover {
-  background: rgba(255, 255, 255, 0.15);
-  border-color: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.15) !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
 }
 </style>

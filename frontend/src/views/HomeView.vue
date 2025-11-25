@@ -2,23 +2,25 @@
 import { ref, onMounted, onUnmounted, computed, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import Button from 'primevue/button'
-import Card from 'primevue/card'
-import Badge from 'primevue/badge'
-import Toast from 'primevue/toast'
-import { useToast } from 'primevue/usetoast'
-import Dialog from 'primevue/dialog'
-import InputText from 'primevue/inputtext'
-import TabView from 'primevue/tabview'
-import TabPanel from 'primevue/tabpanel'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Toaster } from '@/components/ui/sonner'
+import { toast } from 'sonner'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Label } from '@/components/ui/label'
+import { DialogFooter } from '@/components/ui/dialog'
 import { Terminal } from 'xterm'
 import { FitAddon } from 'xterm-addon-fit'
 import { useTerminalStore } from '../stores/terminal'
 import { initializeApiService, terminalApi } from '../services/api-service'
+import SvgIcon from '@/components/ui/svg-icon.vue'
 
 const router = useRouter()
 const { t } = useI18n()
-const toast = useToast()
 const terminalStore = useTerminalStore()
 
 // Terminal management state / 终端管理状态
@@ -58,12 +60,7 @@ const fetchTerminals = async () => {
     console.error('Error fetching terminals:', error)
     terminals.value = []
     terminalStore.updateTerminals([])
-    toast.add({
-      severity: 'error',
-      summary: t('common.error'),
-      detail: t('messages.fetchTerminalsError'),
-      life: 3000
-    })
+    toast.error(t('messages.fetchTerminalsError'))
   } finally {
     isLoading.value = false
   }
@@ -102,20 +99,10 @@ const deleteTerminal = async (id: string) => {
       activeTerminalId.value = null
     }
     
-    toast.add({
-      severity: 'success',
-      summary: t('common.success'),
-      detail: t('messages.terminalDeleted'),
-      life: 3000
-    })
+    toast.success(t('messages.terminalDeleted'))
   } catch (error) {
     console.error('Error deleting terminal:', error)
-    toast.add({
-      severity: 'error',
-      summary: t('common.error'),
-      detail: t('messages.deleteTerminalError'),
-      life: 3000
-    })
+    toast.error(t('messages.deleteTerminalError'))
   }
 }
 
@@ -287,18 +274,19 @@ const getStatusSeverity = (status: string) => {
   }
 }
 
-const getStatusIcon = (status: string) => {
+const getStatusBadgeVariant = (status: string) => {
   switch (status) {
     case 'active':
-      return 'pi-check-circle'
+      return 'default'
     case 'inactive':
-      return 'pi-pause-circle'
+      return 'secondary'
     case 'terminated':
-      return 'pi-times-circle'
+      return 'destructive'
     default:
-      return 'pi-question-circle'
+      return 'outline'
   }
 }
+
 
 const formatDate = (dateString: string) => {
   const date = new Date(dateString)
@@ -336,12 +324,7 @@ onMounted(async () => {
     fetchTerminals()
   } catch (error) {
     console.error('Failed to initialize API service:', error)
-    toast.add({
-      severity: 'error',
-      summary: t('common.error'),
-      detail: 'Failed to initialize API service',
-      life: 3000
-    })
+    toast.error('Failed to initialize API service')
     isLoading.value = false
   }
 })
@@ -369,13 +352,13 @@ watch(terminals, (newTerminals) => {
 
 <template>
   <div class="h-screen luxury-home-container flex flex-col overflow-hidden">
-    <Toast />
+    <Toaster />
     
     <!-- Luxury loading state / 奢华加载状态 -->
     <div v-if="isLoading" class="flex-1 flex items-center justify-center">
       <div class="text-center animate-luxury-fade-in">
         <div class="text-4xl text-luxury-gold mb-4 animate-luxury-spin">
-          <i class="pi pi-spinner"></i>
+          <SvgIcon name="spinner" class="w-16 h-16" />
         </div>
         <p class="text-text-secondary text-lg font-serif-luxury">{{ t('common.loading') }}</p>
       </div>
@@ -389,18 +372,18 @@ watch(terminals, (newTerminals) => {
         <div class="luxury-sidebar-header">
           <div class="flex items-center justify-between">
             <div class="flex items-center space-x-2">
-              <i class="pi pi-terminal text-luxury-gold luxury-icon"></i>
               <span v-if="!isSidebarCollapsed" class="font-semibold text-text-primary font-serif-luxury">{{ t('home.terminals') }}</span>
             </div>
             <Button
-              :icon="isSidebarCollapsed ? 'pi pi-angle-right' : 'pi pi-angle-left'"
-              severity="secondary"
-              size="small"
-              text
+              variant="outline"
+              size="sm"
               class="luxury-sidebar-toggle"
               @click="toggleSidebar"
-              v-tooltip="isSidebarCollapsed ? t('common.expand') : t('common.collapse')"
-            />
+              :title="isSidebarCollapsed ? t('common.expand') : t('common.collapse')"
+            >
+              <SvgIcon v-if="isSidebarCollapsed" name="chevronRight" class="w-4 h-4" />
+              <SvgIcon v-else name="chevronLeft" class="w-4 h-4" />
+            </Button>
           </div>
         </div>
 
@@ -408,7 +391,7 @@ watch(terminals, (newTerminals) => {
         <div v-if="!isSidebarCollapsed" class="flex-1 overflow-y-auto p-2 luxury-terminal-list">
           <div v-if="terminals.length === 0" class="luxury-empty-state">
             <div class="text-5xl text-platinum mb-4">
-              <i class="pi pi-inbox"></i>
+              <SvgIcon name="archive" class="w-16 h-16" />
             </div>
             <p class="text-text-secondary mb-2 font-serif-luxury">{{ t('home.noTerminals') }}</p>
             <p class="text-text-muted text-sm">{{ t('home.useCtiTool') }}</p>
@@ -430,55 +413,56 @@ watch(terminals, (newTerminals) => {
                       {{ terminal.id || 'N/A' }}
                     </span>
                     <Badge
-                      :severity="getStatusSeverity(terminal.status)"
-                      :value="terminal.status"
+                      :variant="getStatusBadgeVariant(terminal.status)"
                       class="luxury-status-badge"
-                    />
+                    >
+                      {{ terminal.status }}
+                    </Badge>
                   </div>
                   <div class="flex space-x-1 luxury-terminal-actions">
                     <Button
-                      icon="pi pi-trash"
-                      v-tooltip="t('terminal.clear')"
-                      severity="secondary"
-                      size="small"
-                      text
+                      variant="ghost"
+                      size="sm"
                       class="luxury-action-button"
                       @click.stop="clearTerminal(terminal.id)"
-                    />
+                      :title="t('terminal.clear')"
+                    >
+                      <SvgIcon name="trash" class="w-4 h-4" />
+                    </Button>
                     <Button
-                      icon="pi pi-refresh"
-                      v-tooltip="t('terminal.reconnect')"
-                      severity="secondary"
-                      size="small"
-                      text
+                      variant="ghost"
+                      size="sm"
                       class="luxury-action-button"
                       @click.stop="reconnectTerminal(terminal.id)"
-                    />
+                      :title="t('terminal.reconnect')"
+                    >
+                      <SvgIcon name="refresh" class="w-4 h-4" />
+                    </Button>
                     <Button
-                      icon="pi pi-times"
-                      v-tooltip="t('home.terminate')"
-                      severity="danger"
-                      size="small"
-                      text
+                      variant="ghost"
+                      size="sm"
                       class="luxury-action-button-danger"
                       @click.stop="deleteTerminal(terminal.id)"
-                    />
+                      :title="t('home.terminate')"
+                    >
+                      <SvgIcon name="x" class="w-4 h-4" />
+                    </Button>
                   </div>
                 </div>
                 <div class="space-y-1">
                   <div class="flex items-center space-x-2 text-xs luxury-terminal-info">
-                    <i class="pi pi-cog w-3 text-luxury-gold"></i>
+                    <SvgIcon name="cog" class="w-3 h-3 text-luxury-gold" />
                     <span class="text-text-muted">PID:</span>
                     <span class="text-text-secondary">{{ terminal.pid }}</span>
                   </div>
                   <div class="flex items-center space-x-2 text-xs luxury-terminal-info">
-                    <i class="pi pi-folder w-3 text-rose-gold"></i>
+                    <SvgIcon name="folder" class="w-3 h-3 text-rose-gold" />
                     <span class="text-text-secondary truncate" :title="terminal.cwd">
                       {{ terminal.cwd || t('home.default') }}
                     </span>
                   </div>
                   <div class="flex items-center space-x-2 text-xs luxury-terminal-info">
-                    <i class="pi pi-clock w-3 text-platinum"></i>
+                    <SvgIcon name="clock" class="w-3 h-3 text-platinum" />
                     <span class="text-text-secondary">{{ formatDate(terminal.created) }}</span>
                   </div>
                 </div>
@@ -493,7 +477,7 @@ watch(terminals, (newTerminals) => {
         <div v-if="!activeTerminalId" class="flex-1 flex items-center justify-center">
           <div class="text-center animate-luxury-fade-in">
             <div class="text-6xl text-platinum mb-6 animate-luxury-pulse">
-              <i class="pi pi-desktop"></i>
+              <SvgIcon name="monitor" class="w-24 h-24" />
             </div>
             <h3 class="text-2xl font-bold text-text-primary mb-3 font-serif-luxury">{{ t('home.noTerminalSelected') }}</h3>
             <p class="text-text-secondary max-w-md font-serif-luxury">
@@ -507,41 +491,47 @@ watch(terminals, (newTerminals) => {
           <header class="luxury-terminal-header">
             <div class="flex items-center space-x-3">
               <div class="flex items-center space-x-2">
-                <i :class="[getStatusIcon(activeTerminal?.status), 'text-lg luxury-status-icon']"></i>
+                <SvgIcon v-if="activeTerminal?.status === 'active'" name="check" class="w-5 h-5 luxury-status-icon" />
+                <SvgIcon v-else-if="activeTerminal?.status === 'inactive'" name="pause" class="w-5 h-5 luxury-status-icon" />
+                <SvgIcon v-else name="stop" class="w-5 h-5 luxury-status-icon" />
                 <span class="font-semibold text-text-primary font-serif-luxury">{{ activeTerminal?.id || 'Terminal ' + (activeTerminalId || 'N/A') }}</span>
                 <Badge
-                  :severity="getStatusSeverity(activeTerminal?.status)"
-                  :value="activeTerminal?.status"
+                  :variant="getStatusBadgeVariant(activeTerminal?.status)"
                   class="luxury-status-badge"
-                />
+                >
+                  {{ activeTerminal?.status }}
+                </Badge>
               </div>
             </div>
             
             <div class="flex items-center space-x-2">
               <Button
-                icon="pi pi-trash"
-                v-tooltip="t('terminal.clear')"
-                severity="secondary"
-                size="small"
+                variant="outline"
+                size="sm"
                 class="luxury-header-button"
                 @click="clearTerminal(activeTerminalId!)"
-              />
+                :title="t('terminal.clear')"
+              >
+                <SvgIcon name="trash" class="w-4 h-4" />
+              </Button>
               <Button
-                icon="pi pi-refresh"
-                v-tooltip="t('terminal.reconnect')"
-                severity="secondary"
-                size="small"
+                variant="outline"
+                size="sm"
                 class="luxury-header-button"
                 @click="reconnectTerminal(activeTerminalId!)"
-              />
+                :title="t('terminal.reconnect')"
+              >
+                <SvgIcon name="refresh" class="w-4 h-4" />
+              </Button>
               <Button
-                icon="pi pi-times"
-                v-tooltip="t('home.terminate')"
-                severity="danger"
-                size="small"
+                variant="outline"
+                size="sm"
                 class="luxury-header-button-danger"
                 @click="deleteTerminal(activeTerminalId!)"
-              />
+                :title="t('home.terminate')"
+              >
+                <SvgIcon name="x" class="w-4 h-4" />
+              </Button>
             </div>
           </header>
 

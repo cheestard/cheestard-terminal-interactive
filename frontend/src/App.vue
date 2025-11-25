@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import Button from 'primevue/button'
+import { Button } from '@/components/ui/button'
 import { useRouter, useRoute } from 'vue-router'
 import { useTerminalStore } from './stores/terminal'
 import { useI18n } from 'vue-i18n'
+import SvgIcon from '@/components/ui/svg-icon.vue'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -57,32 +58,31 @@ onMounted(() => {
           <div class="flex items-center space-x-6 flex-shrink-0">
             <div class="hidden md:flex items-center space-x-6">
               <span class="flex items-center space-x-2 text-sm text-text-secondary luxury-stat-item">
-                <i class="pi pi-server text-luxury-gold"></i>
+                <SvgIcon name="server" class="w-4 h-4 text-luxury-gold" />
                 <span>{{ stats.total }} {{ t('app.totalTerminals') }}</span>
               </span>
               <span class="flex items-center space-x-2 text-sm text-text-secondary luxury-stat-item">
-                <i class="pi pi-play-circle text-emerald-400"></i>
+                <SvgIcon name="play" class="w-4 h-4 text-emerald-400" />
                 <span>{{ stats.active }} {{ t('app.active') }}</span>
               </span>
               <span class="flex items-center space-x-2 text-sm text-text-secondary luxury-stat-item">
-                <i class="pi pi-pause-circle text-amber-400"></i>
+                <SvgIcon name="pause" class="w-4 h-4 text-amber-400" />
                 <span>{{ stats.inactive }} {{ t('app.inactive') }}</span>
               </span>
               <span class="flex items-center space-x-2 text-sm text-text-secondary luxury-stat-item">
-                <i class="pi pi-stop-circle text-rose-400"></i>
+                <SvgIcon name="stop" class="w-4 h-4 text-rose-400" />
                 <span>{{ stats.terminated }} {{ t('app.terminated') }}</span>
               </span>
             </div>
             
             <Button
-              icon="pi pi-cog"
-              v-tooltip="t('settings.title')"
-              severity="secondary"
-              text
-              rounded
+              variant="ghost"
+              size="icon"
               class="w-10 h-10 luxury-settings-button hover:text-luxury-gold transition-all duration-200 hover:rotate-90"
               @click="navigateToSettings"
-            />
+            >
+              <SvgIcon name="settings" class="w-5 h-5 text-luxury-gold" />
+            </Button>
           </div>
         </div>
       </header>
@@ -356,34 +356,34 @@ onMounted(() => {
     box-shadow: 0 2px 8px rgba(212, 175, 55, 0.3);
   }
   
-  /* 奢华全局按钮样式增强 */
-  .p-button {
-    border-radius: 0.5rem !important;
-    font-weight: 500 !important;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  /* 奢华全局按钮样式增强 - shadcn-vue兼容 */
+  button {
+    border-radius: 0.5rem;
+    font-weight: 500;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
   
-  .p-button:hover {
-    transform: translateY(-1px) !important;
+  button:hover {
+    transform: translateY(-1px);
   }
   
-  /* 奢华输入框样式增强 */
-  .p-inputtext {
-    border-radius: 0.5rem !important;
-    transition: all 0.3s ease !important;
+  /* 奢华输入框样式增强 - shadcn-vue兼容 */
+  input, textarea {
+    border-radius: 0.5rem;
+    transition: all 0.3s ease;
   }
   
-  .p-inputtext:focus {
-    box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.2) !important;
+  input:focus, textarea:focus {
+    box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.2);
   }
   
-  /* 奢华卡片样式增强 */
-  .p-card {
-    border-radius: 1rem !important;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  /* 奢华卡片样式增强 - shadcn-vue兼容 */
+  .card {
+    border-radius: 1rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
   
-  .p-card:hover {
-    transform: translateY(-2px) !important;
+  .card:hover {
+    transform: translateY(-2px);
   }
   </style>

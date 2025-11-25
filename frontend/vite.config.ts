@@ -4,10 +4,14 @@ import vue from '@vitejs/plugin-vue'
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [vue()],
+  plugins: [
+    vue(),
+  ],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      "@/components": path.resolve(__dirname, "./src/components"),
+      "@/lib": path.resolve(__dirname, "./src/lib"),
     },
   },
   build: {
@@ -28,10 +32,15 @@ export default defineConfig({
               id.includes('node_modules/@vueuse')) {
             return 'vue-vendor'
           }
-          // 将PrimeVue相关库分离到单独的块
-          if (id.includes('node_modules/primevue') ||
-              id.includes('node_modules/primeicons')) {
-            return 'prime-vendor'
+          // 将shadcn-vue相关库分离到单独的块
+          if (id.includes('node_modules/shadcn-vue') ||
+              id.includes('node_modules/@radix-vue') ||
+              id.includes('node_modules/class-variance-authority') ||
+              id.includes('node_modules/clsx') ||
+              id.includes('node_modules/tailwind-merge') ||
+              id.includes('node_modules/radix-vue') ||
+              id.includes('node_modules/lucide-vue-next')) {
+            return 'shadcn-vendor'
           }
           // 将xterm相关库分离到单独的块
           if (id.includes('node_modules/xterm')) {

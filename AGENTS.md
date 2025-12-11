@@ -1,5 +1,7 @@
 # 若你是codex或gpt，则你每次务必遵守的规则
 
+## 务必使用简体中文跟用户交流。
+
 ## 有时候用户会要求你用其他工具替代shell_command，你务必遵守。
 
 ## 使用Windows PowerShell的原则：
@@ -17,9 +19,7 @@
 
 ## 如果代码文件是英文注释则修改或新增的文件都写英文注释，同理中文也是，除非用户有在本规则中其他地方有特殊说明。
 
-## 不要让莫名其妙停下来让用户来手动改代码，你明明就有修改代码的能力，自己修改啊。
-
-## 不要莫名其妙就停下来，你需要确保100%完成用户发出的请求，注意用户补充的请求也要完成。除非用户明确表示讨论一下，才停下来，否则必须100%完成用户发出的请求。
+## 警告：不要停下来让用户来手动改代码，你帮用户修改啊。你需要确保100%完成用户发出的请求，注意用户补充的请求也要完成。除非用户明确表示讨论一下才停下来，否则必须100%完成用户发出的请求。
 
 ---
 
@@ -73,3 +73,8 @@ ct start -- node start_be_cheestard-terminal-interactive.mjs; Start-Sleep -Secon
 ## cd frontend && echo y | npx shadcn-vue@latest add 来添加shadcn-vue的某些组件。
 
 ## 务必使用mcphub_CTM这个工具来新增或修改任务列表，才能进行任务，除非用户特殊说明，否则必须用这个工具。
+
+## 若出问题了，请查看start_be_cheestard-terminal-interactive.log
+start_fe_cheestard-terminal-interactive.log这两个文件的日志，自行查看日志并修正代码。
+
+## 注意你写的代码需要跨平台兼容。

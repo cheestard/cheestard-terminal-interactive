@@ -28,6 +28,7 @@
 ### 前端必须用vue3，shadcn-vue，pinia，xtermjs
 ### 后端必须用fastify
 ### 代码文件必须使用中英文双语注释！！！终端输出只需要英文即可。
+### 注意i18n的更改。
 
 ## 每次修改完前端代码必须做的事情：
 必须只能用excute_command或shell_command执行：

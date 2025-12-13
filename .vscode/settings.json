@@ -1,3 +1,6 @@
 {
-    "chatgpt.commentCodeLensEnabled": false
+    "chatgpt.commentCodeLensEnabled": false,
+    "powerquery.client.additionalSymbolsDirectories": [
+        "d:/CodeRelated/cheestard-terminal-interactive/.vscode/excel-pq-symbols"
+    ]
 }

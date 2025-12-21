@@ -35,10 +35,12 @@
 ### 代码文件必须使用中英文双语注释！！！终端输出只需要英文即可。
 ### 注意i18n的更改。
 
+## 本项目禁止用CTI工具执行脚本！！！！！！！！！！！！因为它就是CTI项目的源码!用CTI执行它自己是会出错的，你得用你系统提示词自带的其他执行命令的函数。
+
 ## 每次修改完前端代码必须做的事情：
 必须只能用excute_command或shell_command执行：
 ```bash
-node start_build_fe_cheestard-terminal-interactive.mjs; ct start -- node start_fe_cheestard-terminal-interactive.mjs
+node start_build_fe_cheezmil-terminal-interactive.mjs; ct start -- node start_fe_cheezmil-terminal-interactive.mjs
 ```
 执行这些脚本不需要记录在任务列表中。
 注意区分./和node前缀区别。
@@ -53,11 +55,11 @@ node start_build_fe_cheestard-terminal-interactive.mjs; ct start -- node start_f
 必须只能用excute_command或shell_command执行：
 先
 ```bash
-node start_build_be_cheestard-terminal-interactive.mjs
+node start_build_be_cheezmil-terminal-interactive.mjs
 ```
 然后
 ```bash
-ct start -- node start_be_cheestard-terminal-interactive.mjs; Start-Sleep -Seconds 10; & 'D:\CodeRelated\cheestard-terminal-interactive\reload_mcphub_CTI.ps1'; & 'D:\CodeRelated\cheestard-terminal-interactive\restart_roocode_mcp.ps1'; node src/tests/test-mcp-client.mjs
+ct start -- node start_be_cheezmil-terminal-interactive.mjs; Start-Sleep -Seconds 10; & 'D:\CodeRelated\cheezmil-terminal-interactive\reload_mcphub_CTI.ps1'; & 'D:\CodeRelated\cheezmil-terminal-interactive\restart_roocode_mcp.ps1'; node src/tests/test-mcp-client.mjs
 ```
 执行这些脚本不需要记录在任务列表中。
 注意区分./和node前缀区别。
@@ -80,7 +82,7 @@ ct start -- node start_be_cheestard-terminal-interactive.mjs; Start-Sleep -Secon
 
 ## 务必使用mcphub_CTM这个工具来新增或修改任务列表，才能进行任务，除非用户特殊说明，否则必须用这个工具。
 
-## 若出问题了，请查看start_be_cheestard-terminal-interactive.log
-start_fe_cheestard-terminal-interactive.log这两个文件的日志，自行查看日志并修正代码。
+## 若出问题了，请查看start_be_cheezmil-terminal-interactive.log
+start_fe_cheezmil-terminal-interactive.log这两个文件的日志，自行查看日志并修正代码。
 
 ## 注意你写的代码需要跨平台兼容。

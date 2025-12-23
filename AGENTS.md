@@ -10,7 +10,7 @@
 ### 注意i18n的更改。
 ### 禁止写黑名单命令的任何测试脚本！！！黑名单命令极其危险，不能测试！！！
 
-## 本项目禁止用CTI工具执行脚本！！！因为它就是CTI项目的源码!用CTI执行它自己是会出错的，你得用你系统提示词自带的其他执行命令的函数。
+## 本项目禁止用CTI工具执行脚本！！！！！！！！！！！！！！！！！！！！！！！！！因为它就是CTI项目的源码!用CTI执行它自己是会出错的，你得用你系统提示词自带的其他执行命令的函数。
 
 ## 每次修改完前端代码必须做的事情：
 必须只能用excute_command或shell_command执行：
@@ -41,21 +41,19 @@ ct start -- node start_be_cheezmil-terminal-interactive.mjs; Start-Sleep -Second
 若你不执行，后端的代码修改是不会生效的，白修改了。
 禁止使用其他方式启动后端，必须这样执行脚本才行，若后端代码有修改影响了启动脚本则需要修正启动脚本。
 
-## 禁止执行npm run dev，npm run build，npm install，我已经给你写好了一些脚本你没看见嘛？
+## 禁止盲目执行npm run dev，npm run build，npm install，不是让你不安装依赖，而是我已经给你写好了一些脚本你没看见嘛？必须用我写好的来install依赖。
 
 ## 前端端口1107，后端端口1106，是不会变的。
 
 ## 遇到你不懂的问题务必用mcphub exa搜解决办法啊！
 
-## 不准运行前端开发服务器啊！必须运行的是前端编译的产物啊！
+## 不准运行前端dev服务器啊！必须运行的是前端编译的产物啊！
 
 ## chrome-mcp_chrome_inject_script是用来找到错误的，它可能能解决问题，但是不能不修改项目源码啊，用它找到问题后务必修改源码，而不是任务完成。
 
 ## 禁止用chrome-mcp进行网络搜索，否则会崩溃！
 
 ## cd frontend && echo y | npx shadcn-vue@latest add 来添加shadcn-vue的某些组件。
-
-## 务必使用mcphub_CTM这个工具来新增或修改任务列表，才能进行任务，除非用户特殊说明，否则必须用这个工具。
 
 ## 若出问题了，请查看start_be_cheezmil-terminal-interactive.log
 start_fe_cheezmil-terminal-interactive.log这两个文件的日志，自行查看日志并修正代码。

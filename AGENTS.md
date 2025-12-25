@@ -59,3 +59,7 @@ ct start -- node start_be_cheezmil-terminal-interactive.mjs; Start-Sleep -Second
 start_fe_cheezmil-terminal-interactive.log这两个文件的日志，自行查看日志并修正代码。
 
 ## 注意你写的代码需要跨平台兼容。
+
+## 不管后端和MCP工具如何截断消息返回给MCP客户端，都不能让前端截断显示终端的输出内容，这点非常重要！！
+
+## 用户提出什么功能，你就必须修正或新增对应的测试脚本。

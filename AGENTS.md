@@ -34,7 +34,7 @@ node start_build_be_cheezmil-terminal-interactive.mjs
 ```
 然后
 ```bash
-ct start -- node start_be_cheezmil-terminal-interactive.mjs; Start-Sleep -Seconds 10; & 'D:\CodeRelated\cheezmil-terminal-interactive\reload_mcphub_CTI.ps1'; & 'D:\CodeRelated\cheezmil-terminal-interactive\restart_roocode_mcp.ps1'; node src/tests/test-mcp-client.mjs
+ct start -- node start_be_cheezmil-terminal-interactive.mjs; Start-Sleep -Seconds 30; & 'D:\CodeRelated\cheezmil-terminal-interactive\reload_mcphub_CTI.ps1'; & 'D:\CodeRelated\cheezmil-terminal-interactive\restart_roocode_mcp.ps1'; node src/tests/test-mcp-client.mjs
 ```
 执行这些脚本不需要记录在任务列表中。
 注意区分./和node前缀区别。
